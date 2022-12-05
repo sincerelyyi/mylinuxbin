@@ -19,7 +19,7 @@ then
 	echo -n '[default:all] '
 	read SELECT
 	case $SELECT in
-		[1-9])
+		[0-9]*)
 			BAT_PATH=${PATH_ARRAY[$SELECT]}	
 			if [ -z "$BAT_PATH" ]
 			then
