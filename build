@@ -1,0 +1,59 @@
+#!/usr/bin/bash
+#file name: build
+# just build stm32f batch build file created by keil named like xxxx.BAT
+echo finding for xxx.BAT...
+TEMP=$(find ./ -name *.BAT 2> /dev/null)
+NUM=0
+declare -A PATH_ARRAY
+if [ -n "$TEMP" ]
+then
+	for BAT_PATH in $TEMP
+	do
+        	NUM=`expr ${NUM} + 1`
+        	echo -n "$NUM,"
+       	 	echo $BAT_PATH 	
+		PATH_ARRAY[$NUM]=$BAT_PATH
+	done
+	echo please select the xxx.BAT to build.
+	echo a for all,q for quit,number for selecte xxx.BAT
+	echo -n '[default:all] '
+	read SELECT
+	case $SELECT in
+		[1-9])
+			BAT_PATH=${PATH_ARRAY[$SELECT]}	
+			if [ -z "$BAT_PATH" ]
+			then
+				echo quit.
+				exit 1
+			fi
+	    		echo -n "building $SELECT,"
+            		echo $BAT_PATH...
+	    		cd $(echo ${BAT_PATH%/*})
+	    		chmod +x $(echo ${BAT_PATH##*/})
+	    		/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe ./$(echo ${BAT_PATH##*/})
+	    		cd -
+			;;
+		[a]|'')
+			NUM=0	
+			for BAT_PATH in $TEMP
+			do
+            			NUM=`expr ${NUM} + 1`
+	    			echo -n "building $NUM,"
+            			echo $BAT_PATH... 	
+	    			cd $(echo ${BAT_PATH%/*})
+	    			chmod +x $(echo ${BAT_PATH##*/})
+	    			/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe ./$(echo ${BAT_PATH##*/})
+	    			cd -
+        		done
+			;;
+		*)
+			echo quit.
+			exit 0
+			;;
+	esac
+
+
+else
+	echo can not find xxx.BAT
+	exit 1
+fi
