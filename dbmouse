@@ -1,0 +1,53 @@
+#/usr/bin/bash
+
+#####################################################################
+#               windows linux 双系统公用一个蓝牙鼠标                #
+# 1, 首先再Linux连接好蓝牙鼠标										#
+# 2，在windows下连接好蓝牙鼠标（此时linux下蓝牙已经不能与鼠标相连了)#
+# 3，使用PsExec64.exe 从windows的注册表导出蓝牙的配置				#
+# 4, 将windows下蓝牙鼠标的配置改到linux下							#
+#####################################################################
+
+# windows handle
+windows_handle() {
+	echo "running windows handle.."
+#check powershell exist?
+	if [[ -z $(which powershell.exe) ]];then 
+		echo "can not find powershell.exe" >&2
+		exit 1
+	fi
+#check PsExec64.exe exist?
+	while [[ -z $(which PsExec64.exe) ]];do 
+		echo "can not find PsExec64.exe" >&2
+		read -p "do you want download pstool.zip?(y,n)"
+		case $REPLY in
+		y|Y):
+			wget https://download.sysinternals.com/files/PSTools.zip $(pwd)
+			[[ -d pstool ]] && mkdir pstools
+			[[ -n $(which unzip) ]] || sudo apt install unzip
+			[[ -n $(which unzip) ]] && unzip PSTools.zip -d ./pstools
+			cp ./pstools/PsExec64.exe /mnt/c/Windows/
+			rm ./PSTools.zip*
+			rm -rf ./pstools
+			;;
+		n|N):
+			exit 1
+			;;
+		*):
+			echo "please input y or n."
+			;;
+		esac
+	done
+    powershell.exe PsExec64.exe -s -i  "reg.exe export HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\services\BTHPORT\Parameters\Keys C:\\$(basename $0).reg"
+    [ -f /mnt/c/Windows/PsExec64.exe ] && rm /mnt/c/Windows/PsExec64.exe
+}
+
+#judge in linux or windows
+if [[ $(uname -a) =~ .*Microsoft.* ]];then
+	sys=windows
+	windows_handle
+else
+	sys=linux
+fi
+
+
