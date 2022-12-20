@@ -41,13 +41,17 @@ windows_handle() {
     powershell.exe PsExec64.exe -s -i  "reg.exe export HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\services\BTHPORT\Parameters\Keys C:\\$(basename $0).reg"
     [ -f /mnt/c/Windows/PsExec64.exe ] && rm /mnt/c/Windows/PsExec64.exe
 }
-
+#linux handle
+linux_handle() {
+	echo "running linux handle."
+}
 #judge in linux or windows
 if [[ $(uname -a) =~ .*Microsoft.* ]];then
 	sys=windows
 	windows_handle
 else
 	sys=linux
+	linux_handle
 fi
 
 
