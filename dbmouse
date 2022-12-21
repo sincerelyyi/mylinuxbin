@@ -43,8 +43,8 @@ get_addr(){
 	fi
 	echo "you choose $address"
 }
-#get linux useful key
-get_key(){
+#get the seleceted address file 
+make_selected_file(){
 	read < ~/1.tmp
 	echo "$REPLY" > ~/2.tmp
 	echo "" >>~/2.tmp
@@ -99,14 +99,163 @@ windows_handle() {
     [ -f /mnt/c/Windows/PsExec64.exe ] && rm /mnt/c/Windows/PsExec64.exe
 	iconv -f utf-16le -t utf-8 /mnt/c/$(basename $0).reg > ~/1.tmp
 	get_addr ~/1.tmp
-	get_key
+	make_selected_file
 	mv ~/2.tmp /mnt/c/$(basename $0)_key.reg
 	rm  /mnt/c/$(basename $0).reg
 	rm ~/[[:digit:]].tmp
 }
+#get key from windows file
+declare -A keys
+get_key_windows(){
+	echo
+	echo "finding used key.."
+	if [[ -f "$1"  ]];then
+		while read;do
+			if [[ $REPLY =~ ^\"[[:upper:]][[:alpha:]]*\"  ]];then
+				sub=$(echo $REPLY | grep -o '".*"' |tr -d \")
+				keys[$sub]=$REPLY
+			fi
+		done < $1
+	else
+		echo "$1 is no exist." >&2
+	fi
+	used_keys=(LTK KeyLength ERand EDIV IRK CSRK Address)
+	for i in ${used_keys[@]};do
+		if [[ -z ${keys[$i]} ]];then
+			echo "key '$i' can not be found in $1"
+			exit 1
+		fi
+	done
+	echo "all key is found."
+}
+#translate windows key to linux
+key_windows2linux(){
+	echo
+	echo "translating used key from windows to linux.."
+
+	tmp=${keys[LTK]}
+	tmp=$(echo ${tmp##*:} | tr -d \,| tr [[:lower:]] [[:upper:]])
+	keys[LTK]=$tmp
+	echo "'LTK'=${keys[LTK]}"
+	
+	tmp=${keys[KeyLength]}
+	tmp=$((16#${tmp##*:}))
+	keys[KeyLength]=$tmp
+	echo "'KeyLength'=${keys[KeyLength]}"
+
+	tmp=${keys[ERand]}
+	tmp=${tmp##*:}
+	while [[ $tmp  =~ .*,.* ]];do
+		newtmp="$newtmp${tmp##*\,}"
+		tmp=${tmp%\,*}
+	done
+	newtmp=$(("0x$newtmp$tmp"))
+	keys[ERand]=$newtmp
+	echo "'ERand'=${keys[ERand]}"
+
+	tmp=${keys[EDIV]}
+	tmp=$(("0x${tmp##*:}"))
+	keys[EDIV]=$tmp
+	echo "'EDIV'=${keys[EDIV]}"
+
+	tmp=${keys[IRK]}
+	tmp=$(echo ${tmp##*:} | tr -d \,| tr [[:lower:]] [[:upper:]])
+	keys[IRK]=$tmp
+	echo "'IRK'=${keys[IRK]}"
+
+	tmp=${keys[CSRK]}
+	tmp=$(echo ${tmp##*:} | tr -d \,| tr [[:lower:]] [[:upper:]])
+	keys[CSRK]=$tmp
+	echo "'CSRK'=${keys[CSRK]}"
+
+	tmp=${keys[Address]}
+	tmp=${tmp##*:}
+	newtmp=''
+	while [[ $tmp  =~ .*,.* ]];do
+		newtmp="$newtmp${tmp##*\,}:"
+		tmp=${tmp%\,*}
+	done
+	newtmp="$newtmp$tmp"
+	newtmp=${newtmp##*00:}
+	newtmp=${newtmp^^}
+	keys[Address]=$newtmp
+	echo "'Address'=${keys[Address]}"
+}
+#write file
+write_file(){
+	echo
+	echo "writting file.."
+	up1=${path%/*}
+	up2=${up1%/*}
+	sudo cp -r "${up1}" "${up1}.orig"
+	tmp=$(sudo grep -n ^\\[LongTermKey\\]$ "$path")
+	line=${tmp%%:*}
+	line=$((line + 1))
+	sudo cat "$path" | sed  "$line s/\=.*/\=${keys[LTK]}/" > ~/.tmp
+	sudo cp ~/.tmp "$path"
+	line=$((line + 2))
+	sudo cat "$path" | sed  "$line s/\=.*/\=${keys[KeyLength]}/" > ~/.tmp
+	sudo cp ~/.tmp "$path"
+	line=$((line + 1))
+	sudo cat "$path" | sed  "$line s/\=.*/\=${keys[EDIV]}/" > ~/.tmp
+	sudo cp ~/.tmp "$path"
+	line=$((line + 1))
+	sudo cat "$path" | sed  "$line s/\=.*/\=${keys[ERand]}/" > ~/.tmp
+	sudo cp ~/.tmp "$path"
+	tmp=$(sudo grep -n ^\\[LocalSignatureKey\\]$ "$path")
+	line=${tmp%%:*}
+	line=$((line + 1))
+	sudo cat "$path" | sed  "$line s/\=.*/\=${keys[CSRK]}/" > ~/.tmp
+	sudo cp ~/.tmp "$path"
+	tmp=$(sudo grep -n ^\\[IdentityResolvingKey\\]$ "$path")
+	line=${tmp%%:*}
+	line=$((line + 1))
+	sudo cat "$path" | sed  "$line s/\=.*/\=${keys[IRK]}/" > ~/.tmp
+	sudo mv ~/.tmp "$path"
+	[[ "$up1" != "${up2}/${keys[Address]}" ]] && sudo mv "$up1" "${up2}/${keys[Address]}" 
+	echo "all is ok!"
+}
+#get_dest
+get_dest(){
+	echo
+	echo "getting dest.."
+	paths=($(sudo find  /var/lib/bluetooth/ -type f -name info))
+	if [[ -z "${paths[0]}" ]];then
+		echo "can not find any bluetooth device." >&2
+		echo "you did not connect any bluetooth device age" >%2
+		echo "try to connect one time" >&2
+		exit 1
+	fi
+	
+	path=''
+	while [[ -z "$path" ]];do
+		echo 
+		for ((i=0;i<${#paths[@]};i++));do
+			tmp=${paths[$i]}
+			tmp=${tmp%/*}
+			tmp=${tmp##*/}
+			echo "($i):$tmp"
+		done
+		echo "(q):quit"
+		read -p "please choose your bluetooth mouse'address:"
+		[[ "$REPLY" = [Qq] ]] &&  exit 0 
+		path="${paths[$REPLY]}"
+	done
+}
 #linux handle
 linux_handle() {
-	echo "running linux handle."
+	echo "running linux handle.."
+	if [[ -z "$1"  ]];then
+		echo "error:no argument FILE!" >&2
+		echo "usage: $(basename $0) FILE" >&2
+		exit 1
+	fi
+	dos2unix $1
+	get_key_windows $1
+	key_windows2linux
+	declare -a paths
+	get_dest
+	write_file
 }
 #judge in linux or windows
 if [[ $(uname -a) =~ .*Microsoft.* ]];then
@@ -114,7 +263,7 @@ if [[ $(uname -a) =~ .*Microsoft.* ]];then
 	windows_handle
 else
 	sys=linux
-	linux_handle
+	linux_handle $1
 fi
 
 
