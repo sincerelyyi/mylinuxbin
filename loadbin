@@ -26,6 +26,7 @@ if [ -z "$2" ];then
 	echo "address not input!">&2
 elif [[ "$2" =~ ^0[Xx]8[[:digit:]]{6} ]];then
 	echo 'h'>"$COMMANDFILE"
+	echo 'h'>"$COMMANDFILE"
 	echo "loadbin $1 $2">>"$COMMANDFILE"
 	echo 'r'>>$COMMANDFILE
 	echo 'g'>>$COMMANDFILE

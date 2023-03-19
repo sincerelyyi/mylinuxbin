@@ -22,6 +22,7 @@ then
 fi
 COMMANDFILE=.jlink
 echo 'h'> $COMMANDFILE
+echo 'r'> $COMMANDFILE
 echo "loadfile $1" >> $COMMANDFILE
 echo 'r'  >> $COMMANDFILE
 echo 'g'  >> $COMMANDFILE
