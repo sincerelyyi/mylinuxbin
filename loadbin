@@ -20,7 +20,12 @@ then
 	echo "file '$1' is not exist!">&2
 	exit 1
 fi
-COMMANDFILE=.jlink
+if [ -d '/dev/shm' ]
+then
+COMMANDFILE=/dev/shm/jlink
+else
+COMMANDFILE=jlink
+fi
 ADDR="$2"
 if [ -z "$2" ];then
 	echo "address not input!">&2

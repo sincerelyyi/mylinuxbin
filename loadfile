@@ -20,7 +20,12 @@ then
 	echo file is not exist.
 	exit 1
 fi
-COMMANDFILE=.jlink
+if [ -d "/dev/shm" ]
+then
+COMMANDFILE=/dev/shm/jlink
+else
+COMMANDFILE=jlink
+fi
 echo 'h'> $COMMANDFILE
 echo 'r'> $COMMANDFILE
 echo "loadfile $1" >> $COMMANDFILE
