@@ -23,9 +23,13 @@ else
 	if [ $return = '0'  ]
 	then
 		echo "connecting kali..."
-		echo "please waitting about 6 sec."
-		sleep 5 
-	    sshpass -p kali ssh kali@kali
+		echo -n "please waitting about 9 sec."
+		for (( i=9;i>0;i-- ));
+		do echo -en "\b\b\b\b\b\b${i} sec."
+			sleep 1
+		done
+		echo -e "\b\b\b\b\b\b0 sec."
+		sshpass -p kali ssh kali@kali
 	else
 		echo "'kali'has something worong,exit."
 		echo "return $return"
