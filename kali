@@ -5,7 +5,7 @@ name=$(virsh list --name)
 name=${name:-None}
 if [ $name = "kali" ]
 then
-	sshpass -p kali ssh kali@kali
+	sshpass -p kali ssh -X kali@kali
 else
 	echo "'kali' is starting..."
 	virsh start kali
@@ -29,7 +29,7 @@ else
 			sleep 1
 		done
 		echo -e "\b\b\b\b\b\b0 sec."
-		sshpass -p kali ssh kali@kali
+		sshpass -p kali ssh -X kali@kali
 	else
 		echo "'kali'has something worong,exit."
 		echo "return $return"
