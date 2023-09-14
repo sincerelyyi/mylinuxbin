@@ -1,0 +1,130 @@
+#!/usr/bin/bash
+#file name: stmprogram
+#implement loadbin or loadfile of jlinkexe to simplify using burnning *.hex to stm32f mcu
+
+#subfunction usage
+uasage ()
+{
+	echo "                   stmprogram"
+	echo "this script program stm ICs by jlink."
+	echo "Usage: stmprogram [OPTION] [hexfile|(binfile [addr])] "
+	echo "       binfile: xx.bin  hex: xx.hex."
+	echo "       if binfile,addr no gived,default 0x8010000."
+	echo "OPTION:"
+	echo "       -h or --help: show helps."
+	echo "       -d or --device: the name of stm ICs,default:STM32F407VE."
+	echo "                       or the order number of ICs name,like 1,2."
+	echo "       -i or --interface: jtag or swd.default: swd"
+	echo "       -s or --speed: program speed,400 for 400K bit.default: 400"
+}
+#确认JLink是否存在
+JLINK=$(which JLink.exe)
+if [ -z "$JLINK" ]
+then
+	JLINK=$(which JLinkExe)
+	if [ -z "$JLINK" ]
+	then
+		echo "can not find jlink,it may be not installed."
+		exit 1
+	else
+		JLINK='JLinkExe'
+	fi
+else
+	JLINK='JLink.exe'
+fi
+
+#处理参数
+until [ $# = 0 ]; do
+	case $1 in
+		-h|--help)
+			uasage 
+			exit 0
+			;;
+		-d|--device)
+			shift
+			dev=$1
+			;;
+		-i|--i)
+			shift
+			intfc=$1
+			;;
+		-s|--speed)
+			shift
+			spd=$1
+			;;
+		-*)
+			echo "no this OPTION."
+			exit 2
+			;;
+		*)
+			if [ -z $file ]; then
+				file=$1
+			elif [ -z $addr ]; then
+				addr=$1
+			else
+				echo "too much args."
+				exit 1
+			fi
+			;;
+	esac
+	shift
+done
+# 检查参数
+echo $file $dev $intfc $spd $addr
+file=${file:-$(find ./ -type f -name "*.[hH][eE][xX]" -print -quit)}
+if [[ $file =~ .*[hH][eE][xX] ]]; then
+	if ! [ -z $addr ]; then
+		echo "too much args."
+		exit 2
+	else
+		act=loadfile
+	fi
+elif [[ $file =~ .*[bB][iI][nN] ]]; then
+	addr=${addr:-"0x8010000"}
+	if ! [[ $addr =~ 0[xX][0]?8[[:digit:]]{6} ]]; then
+		echo "wrong address format,should 0x8010000 ept."
+		exit 3
+	else
+		act=loadbin
+	fi
+else
+	echo "no availabe file for program.should be xx.bin or xx.hex."
+	exit 4
+fi
+if ! [[ $dev =~ [sS][tT][mM][[:digit:]]{2}[fF][[:digit:]]{3}[[:alnum:]]{2} ]]; then
+	echo "1) STM32F407VE"
+	echo "2) STM32F103C8"
+	echo "or device name."
+	echo -n "please choose a device [1]:"
+	read dev
+	case ${dev} in 
+		1)
+			dev=STM32F407VE
+			;;
+		2)
+			dev=STM32F103C8
+			;;
+		[sS][tT][mM][[:digit:]][[:digit:]][fF][[:digit:]][[:digit:]][[:digit:]][[:alnum:]][[:alnum:]])
+			dev=${dev^^} #转换为大写
+			;;
+		*)
+			dev=STM32F407VE
+			;;
+	esac		
+fi
+intfc=${intfc:-"swd"}
+spd=${spd:-"400"}
+if [ -d "/dev/shm" ]
+then
+	COMMANDFILE=/dev/shm/jlink
+else
+	COMMANDFILE=jlink
+fi
+echo 'r'> $COMMANDFILE
+echo 'h'> $COMMANDFILE
+echo "${act} ${file}" >> $COMMANDFILE
+echo 'r'  >> $COMMANDFILE
+echo 'g'  >> $COMMANDFILE
+echo 'qc' >> $COMMANDFILE
+$JLINK -autoconnect 1 -device $dev -if ${intfc} -speed ${spd} -commandfile $COMMANDFILE
+rm -f $COMMANDFILE
