@@ -7,16 +7,29 @@ uasage ()
 {
 	echo "                   stmprogram"
 	echo "this script program stm ICs by jlink."
-	echo "Usage: stmprogram [OPTION] [hexfile|(binfile [addr])] "
+	echo "Usage: stmprogram [OPTION] [hexfile|(binfile [address])] "
 	echo "       binfile: xx.bin  hex: xx.hex."
-	echo "       if binfile,addr no gived,default 0x8010000."
+	echo "       if binfile,address no gived,default 0x8010000."
 	echo "OPTION:"
 	echo "       -h or --help: show helps."
 	echo "       -d or --device: the name of stm ICs,default:STM32F407VE."
 	echo "                       or the order number of ICs name,like 1,2."
-	echo "       -i or --interface: jtag or swd.default: swd"
-	echo "       -s or --speed: program speed,400 for 400K bit.default: 400"
+	echo "       -i or --interface: JTAG,cJTAG or SWD.default: SWD"
+	echo "       -s or --speed: program speed 100-100000,4000 for 4000K bit.default: 4000"
+	echo "       -r or --reset: reset config file.the args you input saved to config file"
+	echo "                      for auto comolete next time"
+	echo "       -v or --view: view config file."
 }
+
+setfdefault ()
+{
+	fdevice=""
+	finterface="swd"
+	fspeed="4000"
+	ffile=$(find $(pwd)/build/ -type f -name "*.[hH][eE][xX]" -print -quit)
+	faddress="0x8010000"
+}
+
 #确认JLink是否存在
 JLINK=$(which JLink.exe)
 if [ -z "$JLINK" ]
@@ -33,6 +46,26 @@ else
 	JLINK='JLink.exe'
 fi
 
+# 确定文件路径
+if [ -d "/dev/shm" ]
+then
+	COMMANDFILE=/dev/shm/jlink
+	CONFIGFILE=/dev/shm/stmprogram.cfg
+else
+	COMMANDFILE=/tmp/Jlink
+	CONFIGFILE=/tmp/stmprogram.cfg
+fi
+
+#检查CONFIGFILE
+if [ -e $CONFIGFILE ]; then
+	if [ -n "$(source $CONFIGFILE)" ]; then #CONFIGFILE内容有误
+		setfdefault
+	else
+		source $CONFIGFILE
+	fi
+else
+	setfdefault
+fi
 #处理参数
 until [ $# = 0 ]; do
 	case $1 in
@@ -40,27 +73,34 @@ until [ $# = 0 ]; do
 			uasage 
 			exit 0
 			;;
+		-v|--view)
+			cat $CONFIGFILE
+			exit 0
+			;;
 		-d|--device)
 			shift
-			dev=$1
+			device=$1
 			;;
 		-i|--i)
 			shift
-			intfc=$1
+			interface=$1
 			;;
 		-s|--speed)
 			shift
-			spd=$1
+			speed=$1
+			;;
+		-r|--reset)
+			setfdefault
 			;;
 		-*)
 			echo "no this OPTION."
 			exit 2
 			;;
 		*)
-			if [ -z $file ]; then
+			if [ -z "$file" ]; then
 				file=$1
-			elif [ -z $addr ]; then
-				addr=$1
+			elif [ -z "$address" ]; then
+				address=$1
 			else
 				echo "too much args."
 				exit 1
@@ -69,62 +109,111 @@ until [ $# = 0 ]; do
 	esac
 	shift
 done
+echo device=$device interface=$interface speed=$speed file=$file address=$address
 # 检查参数
-echo $file $dev $intfc $spd $addr
-file=${file:-$(find ./ -type f -name "*.[hH][eE][xX]" -print -quit)}
-if [[ $file =~ .*[hH][eE][xX] ]]; then
-	if ! [ -z $addr ]; then
+file=${file:-${ffile}}
+if [[ "$file" =~ .*[hH][eE][xX] ]]; then
+	if ! [ -z $address ]; then
 		echo "too much args."
 		exit 2
 	else
-		act=loadfile
+		act="loadfile $file"
 	fi
 elif [[ $file =~ .*[bB][iI][nN] ]]; then
-	addr=${addr:-"0x8010000"}
-	if ! [[ $addr =~ 0[xX][0]?8[[:digit:]]{6} ]]; then
+	address=${address:-"$faddress"}
+	address=${address:-"0x8010000"}
+	if ! [[ $address =~ 0[xX][0]?8[[:digit:]]{6} ]]; then
 		echo "wrong address format,should 0x8010000 ept."
 		exit 3
 	else
-		act=loadbin
+		act="loadbin $file $address"
 	fi
 else
-	echo "no availabe file for program.should be xx.bin or xx.hex."
-	exit 4
-fi
-if ! [[ $dev =~ [sS][tT][mM][[:digit:]]{2}[fF][[:digit:]]{3}[[:alnum:]]{2} ]]; then
-	echo "1) STM32F407VE"
-	echo "2) STM32F103C8"
-	echo "or device name."
-	echo -n "please choose a device [1]:"
-	read dev
-	case ${dev} in 
-		1)
-			dev=STM32F407VE
+	echo ""
+	find $(pwd) -type f -name "*.[hH][eE][xX]" > /dev/shm/findfile 
+	mapfile -t -n 99 files < /dev/shm/findfile
+	num=0
+	for i in "${files[@]}"; do
+		num=$((num+1))
+		printf "%2d) %s\n" "${num}" "$i"
+	done
+	rm -f /dev/shm/findfile
+	echo ""
+	echo -n "please choose a file or enter name:"
+	read file
+	case $file in
+		[[:digit:]]|[[:digit:]][[:digit:]])
+			file=\"${files[$((file-1))]}\"
 			;;
-		2)
-			dev=STM32F103C8
-			;;
-		[sS][tT][mM][[:digit:]][[:digit:]][fF][[:digit:]][[:digit:]][[:digit:]][[:alnum:]][[:alnum:]])
-			dev=${dev^^} #转换为大写
+		*.[hH][eE][xX]|*.[bB][iI][nN])
+			file=$file
 			;;
 		*)
-			dev=STM32F407VE
+			echo "no availabe file for program."
+			echo "should be xx.bin or xx.hex."
+			exit 4
+			;;
+	esac
+	echo file=$file
+	act="loadfile $file"
+fi
+device=${device:-$fdevice}
+if ! [[ $device =~ [sS][tT][mM][[:digit:]]{2}[fF][[:digit:]]{3}[[:alnum:]]{2} ]]; then
+	echo "1) STM32F407VE [default]"
+	echo "2) STM32F103C8"
+	echo -n "please choose a device or enter name:"
+	read  device
+	case ${device} in 
+		1)
+			device=STM32F407VE
+			;;
+		2)
+			device=STM32F103C8
+			;;
+		[sS][tT][mM][[:digit:]][[:digit:]][fF][[:digit:]][[:digit:]][[:digit:]][[:alnum:]][[:alnum:]])
+			device=${device^^} #转换为大写
+			;;
+		*)
+			device=STM32F407VE
 			;;
 	esac		
 fi
-intfc=${intfc:-"swd"}
-spd=${spd:-"400"}
-if [ -d "/dev/shm" ]
-then
-	COMMANDFILE=/dev/shm/jlink
-else
-	COMMANDFILE=jlink
+interface=${interface:-$finterface}
+interface=${interface^^}
+case $interface in
+	JTAG|SWD)
+		;;
+	CJTAG)
+		interface=cJTAG
+		;;
+	*)
+		echo "error interface,must be JTAG,cJTAG,SWD."
+		exit 5
+		;;
+esac
+speed=${speed:-$fspeed}
+if (( speed < 100 )); then
+	echo "speed too low"
+	exit 6
+elif (( speed > 100000 )); then
+	echo "speed too high"
+	exit 7
 fi
-echo 'r'> $COMMANDFILE
+#写commandfile
 echo 'h'> $COMMANDFILE
-echo "${act} ${file}" >> $COMMANDFILE
+echo 'r'>> $COMMANDFILE
+echo "${act}" >> $COMMANDFILE
 echo 'r'  >> $COMMANDFILE
 echo 'g'  >> $COMMANDFILE
 echo 'qc' >> $COMMANDFILE
-$JLINK -autoconnect 1 -device $dev -if ${intfc} -speed ${spd} -commandfile $COMMANDFILE
-rm -f $COMMANDFILE
+#写configfile
+echo "fdevice=$device" > $CONFIGFILE
+echo "finterface=$interface" >> $CONFIGFILE
+echo "fspeed=$speed" >> $CONFIGFILE
+echo "ffile=$file" >> $CONFIGFILE
+echo "faddress=$address" >> $CONFIGFILE
+echo "$JLINK -autoconnect 1 -device $device -if ${interface} -speed ${speed} -commandfile $COMMANDFILE"
+echo ""
+$JLINK -autoconnect 1 -device $device -if ${interface} -speed ${speed} -commandfile $COMMANDFILE
+rm $COMMANDFILE
+
