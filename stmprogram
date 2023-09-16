@@ -112,7 +112,11 @@ done
 echo device=$device interface=$interface speed=$speed file=$file address=$address
 # 检查参数
 file=${file:-${ffile}}
-if [[ "$file" =~ .*[hH][eE][xX] ]]; then
+file=${file#./}
+if  [[ "$file" =~ ^[^/].* ]]; then
+	file=$(pwd)/$file
+fi
+if [[ "$file" =~ .*\.[hH][eE][xX]$ ]]; then
 	if ! [ -z $address ]; then
 		echo "too much args."
 		exit 2
@@ -124,7 +128,7 @@ if [[ "$file" =~ .*[hH][eE][xX] ]]; then
 			exit 2
 		fi
 	fi
-elif [[ $file =~ .*[bB][iI][nN] ]]; then
+elif [[ $file =~ .*\.[bB][iI][nN]$ ]]; then
 	address=${address:-"$faddress"}
 	address=${address:-"0x8010000"}
 	if ! [[ $address =~ 0[xX][0]?8[[:digit:]]{6} ]]; then
