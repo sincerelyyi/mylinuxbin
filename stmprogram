@@ -130,14 +130,12 @@ elif [[ $file =~ .*[bB][iI][nN] ]]; then
 	fi
 else
 	echo ""
-	find $(pwd) -type f -name "*.[hH][eE][xX]" > /dev/shm/findfile 
-	mapfile -t -n 99 files < /dev/shm/findfile
+	mapfile -t -n 99 files < <(find $(pwd) -type f -name "*.[hH][eE][xX]")
 	num=0
 	for i in "${files[@]}"; do
 		num=$((num+1))
 		printf "%2d) %s\n" "${num}" "$i"
 	done
-	rm -f /dev/shm/findfile
 	echo ""
 	echo -n "please choose a file or enter name:"
 	read file
