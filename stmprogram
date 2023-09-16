@@ -117,7 +117,12 @@ if [[ "$file" =~ .*[hH][eE][xX] ]]; then
 		echo "too much args."
 		exit 2
 	else
-		act="loadfile $file"
+		if [ -e $file ]; then
+			act="loadfile $file"
+		else
+			echo $file not exist!
+			exit 2
+		fi
 	fi
 elif [[ $file =~ .*[bB][iI][nN] ]]; then
 	address=${address:-"$faddress"}
@@ -126,7 +131,12 @@ elif [[ $file =~ .*[bB][iI][nN] ]]; then
 		echo "wrong address format,should 0x8010000 ept."
 		exit 3
 	else
-		act="loadbin $file $address"
+		if [ -e $file ]; then
+			act="loadbin $file $address"
+		else
+			echo $file not exist!
+			exit 2
+		fi
 	fi
 else
 	echo ""
@@ -210,8 +220,9 @@ echo "finterface=$interface" >> $CONFIGFILE
 echo "fspeed=$speed" >> $CONFIGFILE
 echo "ffile=$file" >> $CONFIGFILE
 echo "faddress=$address" >> $CONFIGFILE
-echo "$JLINK -autoconnect 1 -device $device -if ${interface} -speed ${speed} -commandfile $COMMANDFILE"
 echo ""
 $JLINK -autoconnect 1 -device $device -if ${interface} -speed ${speed} -commandfile $COMMANDFILE
+echo ""
+echo device=$device interface=$interface speed=$speed file=$file address=$address
 rm $COMMANDFILE
 
