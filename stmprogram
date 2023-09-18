@@ -32,23 +32,26 @@ setfdefault ()
 
 #确认JLink是否存在
 JLINK=$(which JLink.exe)
-if [ -z "$JLINK" ]
-then
+if [ -z "$JLINK" ]; then
 	JLINK=$(which JLinkExe)
-	if [ -z "$JLINK" ]
-	then
+	if [ -z "$JLINK" ];	then
 		echo "can not find jlink,it may be not installed."
 		exit 1
-	else
+	elif [ -n "$(echo $JLINK | grep windows)" ]; then
+		iswindows=true
 		JLINK='JLinkExe'
 	fi
 else
 	JLINK='JLink.exe'
+	iswindows=true
 fi
 
 # 确定文件路径
-if [ -d "/dev/shm" ]
-then
+
+if [ "$iswindows" == "true" ]; then
+	COMMANDFILE="../Jlink"
+	CONFIGFILE="../stmprogram.cfg"
+elif [ -d "/dev/shm" ]; then
 	COMMANDFILE=/dev/shm/jlink
 	CONFIGFILE=/dev/shm/stmprogram.cfg
 else
@@ -212,8 +215,8 @@ elif (( speed > 100000 )); then
 	exit 7
 fi
 #写commandfile
-echo 'h'> $COMMANDFILE
-echo 'r'>> $COMMANDFILE
+echo 'h' > $COMMANDFILE
+echo 'r' >> $COMMANDFILE
 echo "${act}" >> $COMMANDFILE
 echo 'r'  >> $COMMANDFILE
 echo 'g'  >> $COMMANDFILE
