@@ -38,12 +38,12 @@ if [ -z "$JLINK" ]; then
 		echo "can not find jlink,it may be not installed."
 		exit 1
 	elif [ -n "$(echo $JLINK | grep windows)" ]; then
-		iswindows=true
+		iswindows="true"
 		JLINK='JLinkExe'
 	fi
 else
 	JLINK='JLink.exe'
-	iswindows=true
+	iswindows="true"
 fi
 
 # 确定文件路径
@@ -125,7 +125,7 @@ if [[ "$file" =~ .*\.[hH][eE][xX]$ ]]; then
 		exit 2
 	else
 		if [ -e $file ]; then
-			if [ $iswindows == true ]; then
+			if [ "$iswindows" == "true" ]; then
 				file=${file#"$(pwd)/"}
 			fi
 			act="loadfile $file"
@@ -142,7 +142,7 @@ elif [[ $file =~ .*\.[bB][iI][nN]$ ]]; then
 		exit 3
 	else
 		if [ -e $file ]; then
-			if [ $iswindows == true ]; then
+			if [ "$iswindows" == "true" ]; then
 				file=${file#"$(pwd)/"}
 			fi
 			act="loadbin $file $address"
@@ -175,7 +175,7 @@ else
 			exit 4
 			;;
 	esac
-	if [ $iswindows == true ]; then
+	if [ "$iswindows" == "true" ]; then
 		file=${file#"$(pwd)/"}
 	fi
 	echo file=$file
