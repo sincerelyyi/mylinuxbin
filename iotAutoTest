@@ -1,0 +1,76 @@
+#!/bin/bash
+
+filename="/home/jiayi/OneDrive/产品/WL_IOT_001_v1.4/test_data/test_$(date "+%Y%m%d").txt"
+
+echo "this is iot auto test"
+
+
+# 烧录pin脚测试程序
+stmprogram -d STM32F103C8 -i SWD -s 40000 iotest.hex
+echo ""
+echo ""
+
+# 设置串口
+stty -F /dev/ttyUSB0 115200 raw -echo
+# 检查io测试是否通过
+while  read -r line; do
+    echo $line | tr -d "\r" | tee -a $filename
+    if [[ "$line" == *"auto test passed"* ]]; then
+        break
+    fi
+    if [[ "$line" == *"auto test failed!"* ]]; then
+       exit 
+    fi
+done < /dev/ttyUSB0
+
+echo ""
+echo ""
+
+stmprogram WL_IOT_001_TEST.hex  1> /dev/null
+while  read -r line; do
+        # 检查是否包含"auto test passed"
+    echo $line | iconv -f GBK -t utf-8 | tr -d "\r" | tee -a $filename
+    if [[ "$line" == *"+CCID: "* ]]; then
+        break
+    fi
+    if [[ "$line" == *"ERROR"* ]]; then
+       exit 
+    fi
+done < /dev/ttyUSB0
+
+echo -en TEST > /dev/ttyUSB0
+
+while  read -r line; do
+    newline=$(echo $line | iconv -f GBK -t utf-8)
+    echo $newline | tr -d "\r"| tee -a $filename
+    if [[ "$newline" == *"wifi扫描+基站定位"* ]]; then
+        break
+    fi
+done < /dev/ttyUSB0
+
+while  read -r line; do
+    newline=$(echo $line | iconv -f GBK -t utf-8)
+    echo $newline | tr -d "\r"| tee -a $filename
+    if [[ "$newline" == *"CARD：10101010"* ]]; then
+        break
+    fi
+done < /dev/ttyUSB0
+
+while  read -r line; do
+    newline=$(echo $line | iconv -f GBK -t utf-8)
+    echo $newline 
+    if [[ "$newline" == *"拨位开关：0000"* ]]; then
+        break
+    fi
+done < /dev/ttyUSB0
+
+while  read -r line; do
+        # 检查是否包含"auto test passed"
+    newline=$(echo $line | iconv -f GBK -t utf-8)
+    echo $newline
+    if [[ "$newline" == *"拨位开关：1111"* ]]; then
+        break
+    fi
+done < /dev/ttyUSB0
+
+cat IOT_001_Serial.txt
