@@ -1,6 +1,6 @@
 #!/bin/bash
 
-filename="/home/jiayi/OneDrive/产品/WL_IOT_001_v1.4/test_data/test_$(date "+%Y%m%d").txt"
+filename="/home/jiayi/test_$(date "+%Y%m%d").txt"
 
 echo "this is iot auto test"
 
