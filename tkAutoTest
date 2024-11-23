@@ -1,0 +1,115 @@
+#!/bin/bash
+
+
+function uasage ()
+{
+	echo "                   tkAutoTest"
+	echo "this script auto test tk io board."
+	echo "Usage: tkAutoTest [OPTION]."
+	echo "OPTION:"
+	echo "       -h or --help: show helps."
+	echo "       -r or --regen: regenerate all_xxxxxx.hex file."
+}
+
+function generate_hex ()
+{
+    touch MakeFile
+    sed -i 's/#define boardtest 0/#define boardtest 1/g' Core/Inc/main.h
+    make
+    cat ../bootloader_IO002/build/Bootloader_UDisk_USB.hex  \
+        build/WL_IO_F407.hex \
+        ../f407_iap/build/WL_IO_F407.hex > "all_$(date "+%Y%m%d").hex"
+}
+
+# 全局变量
+testname="/home/jiayi/autotest_$(date "+%Y%m%d").txt"
+infoname="/home/jiayi/io_info_$(date "+%Y%m%d").txt"
+
+
+#处理参数
+until [ $# = 0 ]; do
+	case $1 in
+		-h|--help)
+			uasage 
+			exit 0
+			;;
+		-r|--regenerate)
+		   generate_hex 
+           exit 0
+			;;
+		-*)
+			echo "no this OPTION."
+			exit 1
+			;;
+	esac
+	shift
+done
+
+#是否需要生成all_xxxxxx.hex
+hexname=$(ls all_*.hex)
+if  [[ ! ${hexname} =~ $(date "+%Y%m%d") ]]; then
+    if [ -a ${hexname} ]; then
+        rm ${hexname}
+    fi
+    generate_hex
+    hexname=$(ls all_*.hex)
+fi    
+
+# 烧录all_xxxxxx.hex测试程序
+stmprogram -d STM32F407VE -i SWD -s 40000 ${hexname}
+echo ""
+echo ""
+
+# 设置串口
+stty -F /dev/ttyUSB0 115200 raw -echo
+# 检查io测试是否通过
+while  read -r line; do
+    echo $line | tee -a $testname
+    if [[ "$line" == *"no lkt"* ]]; then
+       exit 
+    fi
+    if [[ "$line" == *"burn failed"* ]]; then
+       exit 
+    fi
+    if [[ "$line" == *"fm test failed"* ]]; then
+       exit 
+    fi
+    if [[ "$line" == *"LKT had be burned successfully"* ]]; then
+        lkt_passed="1"
+    fi
+    if [[ "$line" == *"fm test passed"* ]]; then
+        fm_passed="1"
+    fi
+    if [[ "$line" == *"uart2-5 test passed"* ]]; then
+        uart_passed="1"
+    fi
+    if [[ "$line" == *"input test passed"* ]]; then
+        input_passed="1"
+    fi
+    if [[ "$line" == *"key test passed"* ]]; then
+        key_passed="1"
+        echo -en "\x55\x04\x00\xfd\xaa"
+        read line < /dev/ttyUSB0
+        if [[ "$line" == *"TK_SOFTWARE_V"* ]]; then
+            echo "uart1 test passed" | tee -a $testname
+            uart1_passed="1"
+        else
+            echo "uart1 test failed" | tee -a $testname
+            echo $line | tee -a $testname
+        fi
+    fi
+    if [[ "$line" == *">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"* ]]; then
+       if [[ $lkt_passed && $uart_passed && $fm_passed && $input_passed && $key_passed && $uart1_passed ]]; then
+           break
+       else
+           exit 
+       fi
+    fi
+done < /dev/ttyUSB0
+sleep 1
+time iap_bin -s /dev/ttyACM0 WL_IO_F407.bin
+if [[ $? != 0 ]]; then
+    echo "iap_bin failed" >> $testname
+    echo "\033[01;05;31miap_bin failed\033[0m"
+fi
+io_info /dev/ttyACM0 | tee -a $infoname
