@@ -9,6 +9,7 @@ function uasage ()
 	echo "OPTION:"
 	echo "       -h or --help: show helps."
 	echo "       -r or --regen: regenerate all_xxxxxx.hex file."
+	echo "notes: must run in tk_software/"
 }
 
 function generate_hex ()
