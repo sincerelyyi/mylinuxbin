@@ -9,7 +9,6 @@ function uasage ()
 	echo "OPTION:"
 	echo "       -h or --help: show helps."
 	echo "       -r or --regen: regenerate all_xxxxxx.hex file."
-	echo "notes: must run in tk_software/"
 }
 
 function generate_hex ()
@@ -26,7 +25,7 @@ function generate_hex ()
 testname="/home/jiayi/autotest_$(date "+%Y%m%d").txt"
 infoname="/home/jiayi/io_info_$(date "+%Y%m%d").txt"
 
-
+cd ~/mysoftware/stm/tk_software
 #处理参数
 until [ $# = 0 ]; do
 	case $1 in

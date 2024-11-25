@@ -1,20 +1,71 @@
 #!/bin/bash
 
+function uasage ()
+{
+	echo "                   iotAutoTest"
+	echo "this script auto test iot io board."
+	echo "Usage: iotAutoTest [OPTION]."
+	echo "OPTION:"
+	echo "       -h or --help: show helps."
+	echo "       -s or --switchless: not test switch."
+	echo "       -p or --productless: not program product software."
+}
+
 filename="/home/jiayi/test_$(date "+%Y%m%d").txt"
+serial_file="IOT_001_Serial.txt"
+iottemphex="/dev/shm/IOT.hex"
 
-echo "this is iot auto test"
+cd ~/baidusyncdisk/张家艺工作/江裕彬/WL_IOT_001/input
 
+#处理参数
+until [ $# = 0 ]; do
+	case $1 in
+		-h|--help)
+			uasage 
+			exit 0
+			;;
+		-s|--switchless)
+            switchless=1
+			;;
+		-p|--productless)
+            productless=1
+			;;
+		-*)
+			echo "no this OPTION."
+			exit 1
+			;;
+	esac
+	shift
+done
 
 # 烧录pin脚测试程序
-stmprogram -d STM32F103C8 -i SWD -s 40000 iotest.hex
+
 echo ""
 echo ""
 
+while  read -r line; do
+    if [[ "$line" == *"Error:"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram iotest.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"Script processing completed"* ]]; then
+        echo
+       echo -e "program iotest.hex software passed.\n"
+       break 
+    fi
+done < <(stmprogram -d STM32F103C8 -i SWD -s 40000 iotest.hex)
 # 设置串口
 stty -F /dev/ttyUSB0 115200 raw -echo
 # 检查io测试是否通过
 while  read -r line; do
-    echo $line | tr -d "\r" | tee -a $filename
+    echo "$line" | tr -d "\r" | tee -a "$filename"
+    if [[ "$line" == *"STM32F103 UID:"* ]]; then
+        stmuid=$(echo -n "${line##*\ }" | tr -d "\r")
+        break
+    fi
+
     if [[ "$line" == *"auto test passed"* ]]; then
         break
     fi
@@ -26,11 +77,25 @@ done < /dev/ttyUSB0
 echo ""
 echo ""
 
-stmprogram WL_IOT_001_TEST.hex  1> /dev/null
+while  read -r line; do
+    if [[ "$line" == *"Error:"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram sim 4g test software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"Script processing completed"* ]]; then
+        echo
+       echo -e "program sim 4g test software passed.\n"
+       break 
+    fi
+done < <(stmprogram WL_IOT_001_TEST.hex )
+
 while  read -r line; do
         # 检查是否包含"auto test passed"
-    echo $line | iconv -f GBK -t utf-8 | tr -d "\r" | tee -a $filename
+    echo "$line" | iconv -f GBK -t utf-8 | tr -d "\r" | tee -a "$filename"
     if [[ "$line" == *"+CCID: "* ]]; then
+        ccid=$(echo -n "${line##*\ }" | tr -d "\r")
         break
     fi
     if [[ "$line" == *"ERROR"* ]]; then
@@ -41,36 +106,116 @@ done < /dev/ttyUSB0
 echo -en TEST > /dev/ttyUSB0
 
 while  read -r line; do
-    newline=$(echo $line | iconv -f GBK -t utf-8)
-    echo $newline | tr -d "\r"| tee -a $filename
+    newline=$(echo "$line" | iconv -f GBK -t utf-8)
+    echo "$newline" | tr -d "\r"| tee -a "$filename"
     if [[ "$newline" == *"wifi扫描+基站定位"* ]]; then
         break
     fi
 done < /dev/ttyUSB0
 
 while  read -r line; do
-    newline=$(echo $line | iconv -f GBK -t utf-8)
-    echo $newline | tr -d "\r"| tee -a $filename
+    newline=$(echo "$line" | iconv -f GBK -t utf-8)
+    echo "$newline" | tr -d "\r"| tee -a "$filename"
     if [[ "$newline" == *"CARD：10101010"* ]]; then
         break
     fi
 done < /dev/ttyUSB0
 
-while  read -r line; do
-    newline=$(echo $line | iconv -f GBK -t utf-8)
-    echo $newline 
-    if [[ "$newline" == *"拨位开关：0000"* ]]; then
-        break
-    fi
-done < /dev/ttyUSB0
+if [ -z "$switchless" ]; then
+    while  read -r line; do
+        newline=$(echo "$line" | iconv -f GBK -t utf-8)
+        echo "$newline"
+        if [[ "$newline" == *"拨位开关：0111"* ]]; then
+            break
+        fi
+    done < /dev/ttyUSB0
+
+    while  read -r line; do
+        newline=$(echo "$line" | iconv -f GBK -t utf-8)
+        echo "$newline" 
+        if [[ "$newline" == *"拨位开关：0011"* ]]; then
+            break
+        fi
+    done < /dev/ttyUSB0
+
+    while  read -r line; do
+        newline=$(echo "$line" | iconv -f GBK -t utf-8)
+        echo "$newline" 
+        if [[ "$newline" == *"拨位开关：0001"* ]]; then
+            break
+        fi
+    done < /dev/ttyUSB0
+
+    while  read -r line; do
+        newline=$(echo "$line" | iconv -f GBK -t utf-8)
+        echo "$newline" 
+        if [[ "$newline" == *"拨位开关：0000"* ]]; then
+            break
+        fi
+    done < /dev/ttyUSB0
+fi
 
 while  read -r line; do
-        # 检查是否包含"auto test passed"
-    newline=$(echo $line | iconv -f GBK -t utf-8)
-    echo $newline
+    newline=$(echo "$line" | iconv -f GBK -t utf-8)
+    echo "$newline"
     if [[ "$newline" == *"拨位开关：1111"* ]]; then
         break
     fi
 done < /dev/ttyUSB0
 
-cat IOT_001_Serial.txt
+if [ -n "$productless" ]; then
+    exit
+fi
+
+if [ -s "$serial_file" ]; then
+    serial_num=$(head -c 10 "$serial_file")
+fi
+while [[ "$serial_num" != 12???????? ]]; do
+    read -p "no availd serial_num,please enter:" serial_num
+done 
+
+cp "WL_IOT_001_v1.02(20241018).hex" /dev/shm/IOT.hex
+lastline=$(tail -n 1 "$iottemphex")
+if [[ "$lastline" == ":00000001FF"* ]]; then
+    sed -i '$d' "$iottemphex"
+    serial_line=$(tail -n 1 "$iottemphex")
+    if [[ "$serial_line" =~ ":04FFF000" ]]; then
+        sed -i '$dr' "$iottemphex"
+    fi
+else
+    echo "no availd product software"
+    exit
+fi
+
+da=$(printf "%.8x\n" "$serial_num" | xxd -r -p | od -A n -tx4)
+serial_line=":04FFF000$(echo -n ${da^^})"
+echo -n "$serial_line" | tr -d ':' | basenc -d --base16 > /dev/shm/sum;
+sum=$(checksum /dev/shm/sum)
+sum=${sum##*:}
+sum=$(echo "obase=16; ibase=16; 100-${sum^^}" | bc)
+serial_line="$serial_line$sum"
+echo -e "$serial_line\r" >> "$iottemphex"
+echo "$lastline" >> "$iottemphex"
+
+while  read -r line; do
+    if [[ "$line" == *"Error:"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram product software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"Script processing completed"* ]]; then
+       echo
+       echo
+       echo "mcu序列号:$stmuid" | tee -a "$filename"
+       echo "sim卡序列号:$ccid" | tee -a "$filename"
+       echo -n "serial_num:$serial_num" | tee -a "$filename"
+       serial_num=$(( "$serial_num" + 1 ))
+       echo -en "$serial_num\0" > "$serial_file"
+       echo
+       echo -en "\033[01;05;32mprogram product software passed\033[00m\n"
+       break 
+    fi
+done < <(stmprogram "$iottemphex")
+
+echo -e "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" | tee -a "$filename"
