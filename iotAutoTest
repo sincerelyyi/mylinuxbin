@@ -206,9 +206,9 @@ while  read -r line; do
     if [[ "$line" == *"Script processing completed"* ]]; then
        echo
        echo
-       echo "mcu序列号:$stmuid" | tee -a "$filename"
-       echo "sim卡序列号:$ccid" | tee -a "$filename"
-       echo -n "serial_num:$serial_num" | tee -a "$filename"
+       echo "mcu序列号:$stmuid" | tee -a "$filename" | tee -a /dev/shm/uid
+       echo "sim卡序列号:$ccid" | tee -a "$filename" | tee -a /dev/shm/uid
+       echo "serial_num:$serial_num" | tee -a "$filename" | tee -a /dev/shm/uid
        serial_num=$(( "$serial_num" + 1 ))
        echo -en "$serial_num\0" > "$serial_file"
        echo
@@ -217,4 +217,4 @@ while  read -r line; do
     fi
 done < <(stmprogram "$iottemphex")
 
-echo -e "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" | tee -a "$filename"
+echo -e "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" | tee -a "$filename" | tee -a /dev/shm/uid
