@@ -63,7 +63,6 @@ while  read -r line; do
     echo "$line" | tr -d "\r" | tee -a "$filename"
     if [[ "$line" == *"STM32F103 UID:"* ]]; then
         stmuid=$(echo -n "${line##*\ }" | tr -d "\r")
-        break
     fi
 
     if [[ "$line" == *"auto test passed"* ]]; then
