@@ -9,13 +9,15 @@ function uasage ()
 	echo "       -h or --help: show helps."
 	echo "       -s or --switchless: not test switch."
 	echo "       -p or --productless: not program product software."
+    echo "       -w or --workpath:input files path."
 }
 
-filename="/home/jiayi/test_$(date "+%Y%m%d").txt"
+out_file="/home/jiayi/test_$(date "+%Y%m%d").txt"
 serial_file="IOT_001_Serial.txt"
 iottemphex="/dev/shm/IOT.hex"
+uid_file="/dev/shm/uid"
+work_path="/home/jiayi/baidusyncdisk/张家艺工作/江裕彬/WL_IOT_001/input"
 
-cd ~/baidusyncdisk/张家艺工作/江裕彬/WL_IOT_001/input
 
 #处理参数
 until [ $# = 0 ]; do
@@ -30,6 +32,10 @@ until [ $# = 0 ]; do
 		-p|--productless)
             productless=1
 			;;
+		-w|--workpath)
+            work_path=$2
+            shift
+			;;
 		-*)
 			echo "no this OPTION."
 			exit 1
@@ -38,6 +44,9 @@ until [ $# = 0 ]; do
 	shift
 done
 
+#进入工作目录
+cd "$work_path"
+
 # 烧录pin脚测试程序
 
 echo ""
@@ -45,6 +54,12 @@ echo ""
 
 while  read -r line; do
     if [[ "$line" == *"Error:"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram iotest.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"FAILED"* ]]; then
        echo
        echo "$line"
        echo -e "\033[01;03;31mprogram iotest.hex software failed\033[00m\n"
@@ -60,7 +75,7 @@ done < <(stmprogram -d STM32F103C8 -i SWD -s 40000 iotest.hex)
 stty -F /dev/ttyUSB0 115200 raw -echo
 # 检查io测试是否通过
 while  read -r line; do
-    echo "$line" | tr -d "\r" | tee -a "$filename"
+    echo "$line" | tr -d "\r" | tee -a "$out_file"
     if [[ "$line" == *"STM32F103 UID:"* ]]; then
         stmuid=$(echo -n "${line##*\ }" | tr -d "\r")
     fi
@@ -83,6 +98,12 @@ while  read -r line; do
        echo -e "\033[01;03;31mprogram sim 4g test software failed\033[00m\n"
        exit 
     fi
+    if [[ "$line" == *"FAILED"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram sim 4g test software failed\033[00m\n"
+       exit 
+    fi
     if [[ "$line" == *"Script processing completed"* ]]; then
         echo
        echo -e "program sim 4g test software passed.\n"
@@ -92,7 +113,7 @@ done < <(stmprogram WL_IOT_001_TEST.hex )
 
 while  read -r line; do
         # 检查是否包含"auto test passed"
-    echo "$line" | iconv -f GBK -t utf-8 | tr -d "\r" | tee -a "$filename"
+    echo "$line" | iconv -f GBK -t utf-8 | tr -d "\r" | tee -a "$out_file"
     if [[ "$line" == *"+CCID: "* ]]; then
         ccid=$(echo -n "${line##*\ }" | tr -d "\r")
         break
@@ -106,7 +127,7 @@ echo -en TEST > /dev/ttyUSB0
 
 while  read -r line; do
     newline=$(echo "$line" | iconv -f GBK -t utf-8)
-    echo "$newline" | tr -d "\r"| tee -a "$filename"
+    echo "$newline" | tr -d "\r"| tee -a "$out_file"
     if [[ "$newline" == *"wifi扫描+基站定位"* ]]; then
         break
     fi
@@ -114,7 +135,7 @@ done < /dev/ttyUSB0
 
 while  read -r line; do
     newline=$(echo "$line" | iconv -f GBK -t utf-8)
-    echo "$newline" | tr -d "\r"| tee -a "$filename"
+    echo "$newline" | tr -d "\r"| tee -a "$out_file"
     if [[ "$newline" == *"CARD：10101010"* ]]; then
         break
     fi
@@ -203,12 +224,18 @@ while  read -r line; do
        echo -e "\033[01;03;31mprogram product software failed\033[00m\n"
        exit 
     fi
+    if [[ "$line" == *"FAILED"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram product software failed\033[00m\n"
+       exit 
+    fi
     if [[ "$line" == *"Script processing completed"* ]]; then
        echo
        echo
-       echo "mcu序列号:$stmuid" | tee -a "$filename" | tee -a /dev/shm/uid
-       echo "sim卡序列号:$ccid" | tee -a "$filename" | tee -a /dev/shm/uid
-       echo "serial_num:$serial_num" | tee -a "$filename" | tee -a /dev/shm/uid
+       echo "mcu序列号:$stmuid" | tee -a "$out_file" | tee -a "$uid_file"
+       echo "sim卡序列号:$ccid" | tee -a "$out_file" | tee -a "$uid_file"
+       echo "serial_num:$serial_num" | tee -a "$out_file" | tee -a "$uid_file"
        serial_num=$(( "$serial_num" + 1 ))
        echo -en "$serial_num\0" > "$serial_file"
        echo
@@ -217,4 +244,4 @@ while  read -r line; do
     fi
 done < <(stmprogram "$iottemphex")
 
-echo -e "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" | tee -a "$filename" | tee -a /dev/shm/uid
+echo -e "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" | tee -a "$out_file" | tee -a "$uid_file"
