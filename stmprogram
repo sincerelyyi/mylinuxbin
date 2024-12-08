@@ -23,10 +23,17 @@ uasage ()
 
 setfdefault ()
 {
+    if [ -e /dev/shm/stmprogram.cfg ];then
+        rm /dev/shm/stmprogram.cfg
+    fi
 	fdevice=""
 	finterface="swd"
 	fspeed="4000"
-	ffile=$(find $(pwd)/build/ -type f -name "*.[hH][eE][xX]" -print -quit)
+    if [ -d $(pwd)/build ]; then
+	    ffile="$(find $(pwd)/build/ -type f -name "*.[hH][eE][xX]" -print -quit)"
+    else
+        ffile=
+    fi
 	faddress="0x8010000"
 }
 
