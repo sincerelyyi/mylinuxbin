@@ -1,0 +1,10 @@
+#!/bin/bash
+
+touch /dev/shm/uid
+
+watch -d "tail -n 25 /dev/shm/uid; \
+echo -n mcu: ;cat /dev/shm/uid | grep mcu | sort | uniq | wc -l;\
+echo -n sim: ;cat /dev/shm/uid | grep sim | sort | uniq | wc -l;\
+echo -n serial: ;cat /dev/shm/uid | grep serial | sort | uniq | wc -l"
+
+
