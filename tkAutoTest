@@ -13,7 +13,7 @@ function uasage ()
 
 function generate_hex ()
 {
-    touch MakeFile
+    touch Makefile
     sed -i 's/#define boardtest 0/#define boardtest 1/g' Core/Inc/main.h
     make
     cat ../bootloader_IO002/build/Bootloader_UDisk_USB.hex  \
