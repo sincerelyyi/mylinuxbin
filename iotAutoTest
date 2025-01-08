@@ -201,7 +201,7 @@ if [[ "$lastline" == ":00000001FF"* ]]; then
     sed -i '$d' "$iottemphex"
     serial_line=$(tail -n 1 "$iottemphex")
     if [[ "$serial_line" =~ ":04FFF000" ]]; then
-        sed -i '$dr' "$iottemphex"
+        sed -i '$d' "$iottemphex"
     fi
 else
     echo "no availd product software"
