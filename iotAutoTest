@@ -56,13 +56,13 @@ while  read -r line; do
     if [[ "$line" == *"Error:"* ]]; then
        echo
        echo "$line"
-       echo -e "\033[01;03;31mprogram iotest.hex software failed\033[00m\n"
+       echo -e "\033[01;05;31mprogram iotest.hex software failed\033[00m\n"
        exit 
     fi
     if [[ "$line" == *"FAILED"* ]]; then
        echo
        echo "$line"
-       echo -e "\033[01;03;31mprogram iotest.hex software failed\033[00m\n"
+       echo -e "\033[01;05;31mprogram iotest.hex software failed\033[00m\n"
        exit 
     fi
     if [[ "$line" == *"Script processing completed"* ]]; then
@@ -73,6 +73,10 @@ while  read -r line; do
 done < <(stmprogram -d STM32F103C8 -i SWD -s 40000 iotest.hex)
 # 设置串口
 stty -F /dev/ttyUSB0 115200 raw -echo
+if [[ $(echo $?) != "0" ]];then
+    echo -e "\033[01;05;31mcan not open /dev/ttyUSB0\033[00m\n"
+    exit
+fi
 # 检查io测试是否通过
 while  read -r line; do
     echo "$line" | tr -d "\r" | tee -a "$out_file"
@@ -95,13 +99,13 @@ while  read -r line; do
     if [[ "$line" == *"Error:"* ]]; then
        echo
        echo "$line"
-       echo -e "\033[01;03;31mprogram sim 4g test software failed\033[00m\n"
+       echo -e "\033[01;05;31mprogram sim 4g test software failed\033[00m\n"
        exit 
     fi
     if [[ "$line" == *"FAILED"* ]]; then
        echo
        echo "$line"
-       echo -e "\033[01;03;31mprogram sim 4g test software failed\033[00m\n"
+       echo -e "\033[01;05;31mprogram sim 4g test software failed\033[00m\n"
        exit 
     fi
     if [[ "$line" == *"Script processing completed"* ]]; then
@@ -119,7 +123,7 @@ while  read -r line; do
         break
     fi
     if [[ "$line" == *"ERROR"* ]]; then
-       echo -e "\033[01;03;31m4G modle test failed\033[00m\n"
+       echo -e "\033[01;05;31m4G modle test failed\033[00m\n"
        exit 
     fi
 done < /dev/ttyUSB0
@@ -222,13 +226,13 @@ while  read -r line; do
     if [[ "$line" == *"Error:"* ]]; then
        echo
        echo "$line"
-       echo -e "\033[01;03;31mprogram product software failed\033[00m\n"
+       echo -e "\033[01;05;31mprogram product software failed\033[00m\n"
        exit 
     fi
     if [[ "$line" == *"FAILED"* ]]; then
        echo
        echo "$line"
-       echo -e "\033[01;03;31mprogram product software failed\033[00m\n"
+       echo -e "\033[01;05;31mprogram product software failed\033[00m\n"
        exit 
     fi
     if [[ "$line" == *"Script processing completed"* ]]; then
