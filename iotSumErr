@@ -1,0 +1,21 @@
+#!/bin/bash
+
+while read -r  line; do
+    serial_num="$line"
+if [[ "$serial_num" == 12???????? ]];then 
+    da=$(printf "%.8x\n" "$serial_num" | xxd -r -p | od -A n -tx4)
+    serial_line=":04FFF000$(echo -n ${da^^})"
+    echo -n "$serial_line" | tr -d ':' | basenc -d --base16 > /dev/shm/sum;
+    sum=$(checksum /dev/shm/sum)
+    sum=${sum##*:}
+    sum=$(echo "obase=16; ibase=16; 100-${sum^^}" | bc)
+#    echo "$line":"$sum"
+   if [[  "$sum" == [[:alnum:]] ]];then
+        echo $line | tee -a ~/err_product_num
+    fi
+   if [[  "$sum" == [[:alnum:]][[:alnum:]][[:alnum:]] ]];then
+        echo $line | tee -a ~/err_product_num
+    fi
+fi
+done  < ~/new_product_num
+

@@ -240,6 +240,9 @@ sum=$(echo "obase=16; ibase=16; 100-${sum^^}" | bc)
 if [[ "$sum" == [[:alnum:]] ]];then
     sum="0"$sum
 fi
+if [[  "$sum" == [[:alnum:]][[:alnum:]][[:alnum:]] ]];then
+    sum="00"
+fi
 serial_line="$serial_line$sum"
 echo -e "$serial_line\r" >> "$iottemphex"
 echo "$lastline" >> "$iottemphex"
