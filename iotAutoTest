@@ -16,10 +16,12 @@ function uasage ()
 }
 
 out_file="/home/jiayi/test_$(date "+%Y%m%d").txt"
+#out_file="/media/mint/A0A8-D9F8/test_$(date "+%Y%m%d").txt"
 serial_file="IOT_001_Serial.txt"
 iottemphex="/dev/shm/IOT.hex"
 uid_file="/dev/shm/uid"
 work_path="/home/jiayi/baidusyncdisk/张家艺工作/江裕彬/WL_IOT_001/input"
+#work_path="/media/mint/A0A8-D9F8/input"
 
 
 #处理参数
