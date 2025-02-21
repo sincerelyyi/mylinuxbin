@@ -216,8 +216,9 @@ fi
 if [ -n "$number" ]; then
     serial_num=""
 fi
-while [[ "$serial_num" != 12???????? ]]; do
+while [[ "$serial_num" != 1[2-3]?[0-1]?[0-3]???? ]]; do
     read -p "no availd serial_num,please enter 1250101000:" serial_num
+    serial_num=$(echo $serial_num | grep -oE "12[[:digit:]]{8}")
 done
 
 cp "WL_IOT_001_v1.02(20241018).hex" "$iottemphex"
