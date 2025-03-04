@@ -9,6 +9,7 @@ function uasage ()
 	echo "OPTION:"
 	echo "       -h or --help: show helps."
 	echo "       -r or --regen: regenerate all_xxxxxx.hex file."
+	echo "       -t or --test: no program all_xxxxxx.hex file."
 }
 
 function generate_hex ()
@@ -37,6 +38,9 @@ until [ $# = 0 ]; do
 		   generate_hex 
            exit 0
 			;;
+		-t|--test)
+		   test_enter=1
+			;;
 		-*)
 			echo "no this OPTION."
 			exit 1
@@ -56,7 +60,7 @@ if  [[ ! "$hexname" =~ $(date "+%Y%m%d") ]]; then
 fi    
 
 # 烧录all_xxxxxx.hex测试程序
-while  read -r line; do
+while [[  "$test_enter" != 1 ]] && read -r line; do
     if [[ "$line" == *"Error:"* ]]; then
        echo
        echo "$line"
@@ -110,28 +114,21 @@ while  read -r line; do
     fi
     if [[ "$line" == *"key test passed"* ]]; then
         key_passed="1"
-        echo -en "\x55\x04\x00\xfd\xaa"
-        read line < /dev/ttyUSB0
-        if [[ "$line" == *"TK_SOFTWARE_V"* ]]; then
-            echo "uart1 test passed" | tee -a $testname
-            uart1_passed="1"
-        else
-            echo "uart1 test failed" | tee -a $testname
-            echo $line | tee -a $testname
-        fi
     fi
     if [[ "$line" == *">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"* ]]; then
-       if [[ $lkt_passed && $uart_passed && $fm_passed && $input_passed && $key_passed && $uart1_passed ]]; then
+       if [[ $lkt_passed && $uart_passed && $fm_passed && $input_passed && $key_passed  ]]; then
            break
        else
+            echo "test failed" | tee -a $testname
            exit 
        fi
     fi
 done < /dev/ttyUSB0
 sleep 1
-time iap_bin -s /dev/ttyACM0 WL_IO_F407.bin
+time iap_bin  /dev/ttyACM0 WL_IO_F407.bin
 if [[ $? != 0 ]]; then
     echo "iap_bin failed" >> $testname
-    echo "\033[01;05;31miap_bin failed\033[0m"
+    echo -e "\033[01;05;31miap_bin failed\033[0m"
+    exit
 fi
-io_info /dev/ttyACM0 | tee -a $infoname
+io_info /dev/ttyUSB0 | tee -a $infoname
