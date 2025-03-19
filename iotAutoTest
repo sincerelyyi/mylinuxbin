@@ -91,7 +91,7 @@ if [ -z "$ioless" ]; then
             echo -e "program iotest.hex software passed.\n"
             break
         fi
-    done < <(stmprogram -d STM32F103C8 -i SWD -s 40000 iotest.hex)
+    done < <(stmprogram -d STM32F103C8 -i SWD -s 4000 iotest.hex)
     # 检查io测试是否通过
     while  read -r line; do
         echo "$line" | tr -d "\r" | tee -a "$out_file"
@@ -130,7 +130,7 @@ if [ -z "$simless" ]; then
             echo -e "program sim 4g test software passed.\n"
             break
         fi
-    done < <(stmprogram -d STM32F103C8 -i SWD -s 40000 WL_IOT_001_TEST.hex)
+    done < <(stmprogram -d STM32F103C8 -i SWD -s 4000 WL_IOT_001_TEST.hex)
 
     while  read -r line; do
         # 检查是否包含"auto test passed"
@@ -275,6 +275,6 @@ while  read -r line; do
        echo -en "\033[01;05;32mprogram product software passed\033[00m\n"
        break
     fi
-done < <(stmprogram -d STM32F103C8 -i SWD -s 40000 "$iottemphex")
+done < <(stmprogram -d STM32F103C8 -i SWD -s 4000 "$iottemphex")
 
 echo -e "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" | tee -a "$out_file" | tee -a "$uid_file"

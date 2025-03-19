@@ -78,7 +78,7 @@ while [[  "$test_enter" != 1 ]] && read -r line; do
        echo -e "program iotest.hex software passed.\n"
        break 
     fi
-done < <(stmprogram -d STM32F407VE -i SWD -s 40000 ${hexname})
+done < <(stmprogram -d STM32F407VE -i SWD -s 4000 ${hexname})
 echo ""
 echo ""
 
