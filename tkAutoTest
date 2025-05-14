@@ -26,7 +26,7 @@ function generate_hex ()
 testname="/home/jiayi/autotest_$(date "+%Y%m%d").txt"
 infoname="/home/jiayi/io_info_$(date "+%Y%m%d").txt"
 
-cd ~/mysoftware/stm/tk_software
+cd ~/mysoftware/stm32/tk_software
 #处理参数
 until [ $# = 0 ]; do
 	case $1 in

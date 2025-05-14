@@ -12,7 +12,7 @@ else
 	return=$?
 	if [ $return = '1'  ]
 	then
-		echo "can not find virtalmachine 'kal',please check."
+		echo "can not find virtalmachine 'kali',please check."
 		exit $return
 	fi
 	if [ $return = '127'  ]
