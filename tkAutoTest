@@ -15,7 +15,7 @@ function uasage ()
 function generate_hex ()
 {
     touch myware/boardtest.c
-    sed -i 's/#define BOARD_TEST 0/#define BOARD_TEST 1/g' Core/Inc/main.h
+    sed -E -i  's/[ \t]*#define[ \t]+BOARD_TEST[ \t]+0/#define BOARD_TEST 1/g' Core/Inc/main.h
     make
     cat ../bootloader_IO002/build/Bootloader_UDisk_USB.hex  \
         build/WL_IO_F407.hex \
