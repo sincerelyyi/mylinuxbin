@@ -74,8 +74,9 @@ while [[  "$test_enter" != 1 ]] && read -r line; do
        exit 
     fi
     if [[ "$line" == *"Script processing completed"* ]]; then
-        echo
+       echo
        echo -e "program iotest.hex software passed.\n"
+       echo -e "\033[01;05;32mplease shut down power and turn on.\033[00m\n"
        break 
     fi
 done < <(stmprogram -d STM32F407VE -i SWD -s 4000 ${hexname})
