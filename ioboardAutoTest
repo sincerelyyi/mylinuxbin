@@ -1,0 +1,171 @@
+#!/bin/bash
+
+
+function uasage ()
+{
+	echo "                   ioboardAutoTest"
+	echo "this script auto test ioboard."
+	echo "Usage: ioboardAutoTest [OPTION]."
+	echo "OPTION:"
+	echo "       -h or --help: show helps."
+}
+
+# 全局变量
+path="/home/jiayi/mysoftware/stm32/io-board_test"
+output="/home/jiayi/autotest_$(date "+%Y%m%d").txt"
+testhex="build/io-board_test.hex"
+bootload="data/Bootloader.hex"
+app="data/EliteV3.0.hex"
+COMMANDFILE=/dev/shm/command.jflash
+echo 'r'  >> $COMMANDFILE
+echo 'g'  >> $COMMANDFILE
+echo 'qc' >> $COMMANDFILE
+
+cd "$path"
+#处理参数
+until [ $# = 0 ]; do
+	case $1 in
+		-h|--help)
+			uasage 
+			exit 0
+			;;
+		-*)
+			echo "no this OPTION."
+			exit 1
+			;;
+	esac
+	shift
+done
+
+
+# 烧录testhex测试程序
+while  read -r line; do
+    if [[ "$line" == *"Error:"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram iotest.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"FAILED"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram iotest.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"not exist"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram iotest.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"Script processing completed"* ]]; then
+       echo
+       echo -e "program iotest.hex software passed.\n"
+       break 
+    fi
+done < <(stmprogram -d STM32F103RB -i SWD -s 4000 ${testhex})
+JLinkExe -autoconnect 1 -device stm32f103rb -if swd -speed 4000 -commandfile "$COMMANDFILE" > /dev/null
+echo ""
+echo ""
+
+# 设置串口
+stty -F /dev/ttyUSB0 115200 raw -echo
+if [[ $(echo $?) != "0" ]];then
+    echo -e "\033[01;05;31mcan not open /dev/ttyUSB0\033[00m\n"
+    exit
+fi
+
+# 检查io测试是否通过
+while  read -r line; do
+    echo $line | tee -a $output
+    if [[ "$uart1_passed" != "1" ]]; then
+        echo -en 'a' > /dev/ttyUSB0
+        if [[ "$line" == *"uart1 receive:b"* ]]; then
+            uart1_passed="1" 
+        fi
+    fi
+    if [[ "$line" == *"false"* ]]; then
+       exit 
+    fi
+    if [[ "$line" == *"button_a test ok"* ]]; then
+        button_a_passed="1"
+    fi
+    if [[ "$line" == *"button_b test ok"* ]]; then
+        button_b_passed="1"
+    fi
+    if [[ "$line" == *"sensor_a test ok"* ]]; then
+        sensor_a_passed="1"
+    fi
+    if [[ "$line" == *"sensor_b test ok"* ]]; then
+        sensor_b_passed="1"
+    fi
+    if [[ $uart1_passed && $button_a_passed && $button_b_passed && $sensor_a_passed && $sensor_b_passed  ]]; then
+       echo "io test passed" | tee -a $output
+       break
+    fi
+done < /dev/ttyUSB0
+sleep 1
+
+# 烧录bootload程序
+while  read -r line; do
+    if [[ "$line" == *"Error:"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram bootload.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"FAILED"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram bootload.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"not exist"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram bootload.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"Script processing completed"* ]]; then
+       echo
+       echo -e "program bootload.hex software passed.\n"
+       break 
+    fi
+done < <(stmprogram -d STM32F103RB -i SWD -s 4000 ${bootload})
+JLinkExe -autoconnect 1 -device stm32f103rb -if swd -speed 4000 -commandfile "$COMMANDFILE" > /dev/null
+echo ""
+echo ""
+
+
+# 烧录app程序
+while  read -r line; do
+    if [[ "$line" == *"Error:"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram app.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"FAILED"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram app.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"not exist"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram app.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"Script processing completed"* ]]; then
+       echo
+       echo -e "program app.hex software passed.\n"
+       break 
+    fi
+done < <(stmprogram -d STM32F103RB -i SWD -s 4000 ${app})
+JLinkExe -autoconnect 1 -device stm32f103rb -if swd -speed 4000 -commandfile "$COMMANDFILE" > /dev/null
+echo ""
+echo ""
+echo -e "\033[01;03;32mall passed!\033[00m\n"
+
+# 写保护
