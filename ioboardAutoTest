@@ -65,8 +65,6 @@ while  read -r line; do
     fi
 done < <(stmprogram -d STM32F103RB -i SWD -s 4000 ${testhex})
 JLinkExe -autoconnect 1 -device stm32f103rb -if swd -speed 4000 -commandfile "$COMMANDFILE" > /dev/null
-echo ""
-echo ""
 
 # 设置串口
 stty -F /dev/ttyUSB0 115200 raw -echo
@@ -87,6 +85,9 @@ while  read -r line; do
     if [[ "$line" == *"false"* ]]; then
        exit 
     fi
+    if [[ "$line" == *"power up test ok"* ]]; then
+       echo -e "\033[01;03;32mplease short buttons and sensors to gnd.\033[0m\n"
+    fi
     if [[ "$line" == *"button_a test ok"* ]]; then
         button_a_passed="1"
     fi
@@ -100,7 +101,7 @@ while  read -r line; do
         sensor_b_passed="1"
     fi
     if [[ $uart1_passed && $button_a_passed && $button_b_passed && $sensor_a_passed && $sensor_b_passed  ]]; then
-       echo "io test passed" | tee -a $output
+       echo "io test passed." | tee -a $output
        break
     fi
 done < /dev/ttyUSB0
@@ -133,8 +134,6 @@ while  read -r line; do
     fi
 done < <(stmprogram -d STM32F103RB -i SWD -s 4000 ${bootload})
 JLinkExe -autoconnect 1 -device stm32f103rb -if swd -speed 4000 -commandfile "$COMMANDFILE" > /dev/null
-echo ""
-echo ""
 
 
 # 烧录app程序
@@ -164,8 +163,6 @@ while  read -r line; do
     fi
 done < <(stmprogram -d STM32F103RB -i SWD -s 4000 ${app})
 JLinkExe -autoconnect 1 -device stm32f103rb -if swd -speed 4000 -commandfile "$COMMANDFILE" > /dev/null
-echo ""
-echo ""
-echo -e "\033[01;03;32mall passed!\033[00m\n"
+echo -e "\033[01;05;32mall passed!\033[00m\n"
 
 # 写保护
