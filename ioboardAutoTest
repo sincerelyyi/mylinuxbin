@@ -17,11 +17,14 @@ testhex="build/io-board_test.hex"
 bootload="data/Bootloader.hex"
 app="data/EliteV3.0.hex"
 COMMANDFILE=/dev/shm/command.jflash
-echo 'h'  >> $COMMANDFILE
+echo 'h'  > $COMMANDFILE
+echo "loadfile $bootload"   >> $COMMANDFILE
+echo "loadfile $app"        >> $COMMANDFILE
 echo "loadfile $testhex"    >> $COMMANDFILE
 echo 'setPC    0x20000004'  >> $COMMANDFILE
 echo 'wReg MSP,0x20005000'  >> $COMMANDFILE
 #echo 'g'  >> $COMMANDFILE
+echo 'qc'  >> $COMMANDFILE
 
 cd "$path"
 #处理参数
@@ -61,7 +64,6 @@ while  read -r line; do
        exit 
     fi
 done < <(JLinkExe -autoconnect 1 -device stm32f103rb -if swd -speed 4000 -commandfile "$COMMANDFILE")
-
 # 设置串口
 stty -F /dev/ttyUSB0 115200 raw -echo
 if [[ $(echo $?) != "0" ]];then
@@ -101,62 +103,5 @@ while  read -r line; do
        break
     fi
 done < /dev/ttyUSB0
-sleep 1
 
-# 烧录bootload程序
-while  read -r line; do
-    if [[ "$line" == *"Error:"* ]]; then
-       echo
-       echo "$line"
-       echo -e "\033[01;03;31mprogram bootload.hex software failed\033[00m\n"
-       exit 
-    fi
-    if [[ "$line" == *"FAILED"* ]]; then
-       echo
-       echo "$line"
-       echo -e "\033[01;03;31mprogram bootload.hex software failed\033[00m\n"
-       exit 
-    fi
-    if [[ "$line" == *"not exist"* ]]; then
-       echo
-       echo "$line"
-       echo -e "\033[01;03;31mprogram bootload.hex software failed\033[00m\n"
-       exit 
-    fi
-    if [[ "$line" == *"Script processing completed"* ]]; then
-       echo
-       echo -e "program bootload.hex software passed.\n"
-       break 
-    fi
-done < <(stmprogram -d STM32F103RB -i SWD -s 4000 ${bootload})
-
-
-# 烧录app程序
-while  read -r line; do
-    if [[ "$line" == *"Error:"* ]]; then
-       echo
-       echo "$line"
-       echo -e "\033[01;03;31mprogram app.hex software failed\033[00m\n"
-       exit 
-    fi
-    if [[ "$line" == *"FAILED"* ]]; then
-       echo
-       echo "$line"
-       echo -e "\033[01;03;31mprogram app.hex software failed\033[00m\n"
-       exit 
-    fi
-    if [[ "$line" == *"not exist"* ]]; then
-       echo
-       echo "$line"
-       echo -e "\033[01;03;31mprogram app.hex software failed\033[00m\n"
-       exit 
-    fi
-    if [[ "$line" == *"Script processing completed"* ]]; then
-       echo
-       echo -e "program app.hex software passed.\n"
-       break 
-    fi
-done < <(stmprogram -d STM32F103RB -i SWD -s 4000 ${app})
 echo -e "\033[01;05;32mall passed!\033[00m\n"
-
-# 写保护
