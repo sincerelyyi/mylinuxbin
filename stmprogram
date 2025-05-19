@@ -192,6 +192,7 @@ device=${device:-$fdevice}
 if ! [[ $device =~ [sS][tT][mM][[:digit:]]{2}[fF][[:digit:]]{3}[[:alnum:]]{2} ]]; then
 	echo "1) STM32F407VE [default]"
 	echo "2) STM32F103C8"
+	echo "3) STM32F103RB"
 	echo -n "please choose a device or enter name:"
 	read  device
 	case ${device} in 
@@ -200,6 +201,9 @@ if ! [[ $device =~ [sS][tT][mM][[:digit:]]{2}[fF][[:digit:]]{3}[[:alnum:]]{2} ]]
 			;;
 		2)
 			device=STM32F103C8
+			;;
+		3)
+			device=STM32F103RB
 			;;
 		[sS][tT][mM][[:digit:]][[:digit:]][fF][[:digit:]][[:digit:]][[:digit:]][[:alnum:]][[:alnum:]])
 			device=${device^^} #转换为大写
