@@ -23,7 +23,7 @@ iottemphex="/dev/shm/IOT.hex"
 uid_file="/dev/shm/uid"
 work_path="/home/jiayi/baidusyncdisk/张家艺工作/江裕彬/WL_IOT_001/input"
 #work_path="/media/mint/A0A8-D9F8/input"
-
+PROGRAMFILE=/dev/shm/programfile
 
 #处理参数
 until [ $# = 0 ]; do
@@ -69,11 +69,12 @@ if [[ $(echo $?) != "0" ]];then
   exit
 fi
 
-# 烧录pin脚测试程序
 if [ -z "$ioless" ]; then
     echo ""
     echo ""
 
+    # 烧录pin脚测试程序
+    stmprogram -d STM32F103C8 -i SWD -s 4000 iotest.hex > "$PROGRAMFILE"
     while  read -r line; do
         if [[ "$line" == *"Error:"* ]]; then
             echo
@@ -92,7 +93,8 @@ if [ -z "$ioless" ]; then
             echo -e "program iotest.hex software passed.\n"
             break
         fi
-    done < <(stmprogram -d STM32F103C8 -i SWD -s 4000 iotest.hex)
+    done < "$PROGRAMFILE"
+
     # 检查io测试是否通过
     while  read -r line; do
         echo "$line" | tr -d "\r" | tee -a "$out_file"
@@ -113,6 +115,8 @@ if [ -z "$simless" ]; then
     echo ""
     echo ""
 
+    # 烧录4G测试程序
+    stmprogram -d STM32F103C8 -i SWD -s 4000 WL_IOT_001_TEST.hex > "$PROGRAMFILE"
     while  read -r line; do
         if [[ "$line" == *"Error:"* ]]; then
             echo
@@ -131,8 +135,9 @@ if [ -z "$simless" ]; then
             echo -e "program sim 4g test software passed.\n"
             break
         fi
-    done < <(stmprogram -d STM32F103C8 -i SWD -s 4000 WL_IOT_001_TEST.hex)
+    done < "$PROGRAMFILE"
 
+    # 检查4G测试是否通过
     while  read -r line; do
         # 检查是否包含"auto test passed"
         echo "$line" | iconv -f GBK -t utf-8 | tr -d "\r" | tee -a "$out_file"
@@ -251,6 +256,8 @@ serial_line="$serial_line$sum"
 echo -e "$serial_line\r" >> "$iottemphex"
 echo "$lastline" >> "$iottemphex"
 
+# 烧录APP程序
+stmprogram -d STM32F103C8 -i SWD -s 4000 "$iottemphex" > "$PROGRAMFILE"
 while  read -r line; do
     if [[ "$line" == *"Error:"* ]]; then
        echo
@@ -276,6 +283,9 @@ while  read -r line; do
        echo -en "\033[01;05;32mprogram product software passed\033[00m\n"
        break
     fi
-done < <(stmprogram -d STM32F103C8 -i SWD -s 4000 "$iottemphex")
+done < "$PROGRAMFILE"
 
 echo -e "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" | tee -a "$out_file" | tee -a "$uid_file"
+if [ -e "$PROGRAMFILE" ];then
+    rm "$PROGRAMFILE"
+fi
