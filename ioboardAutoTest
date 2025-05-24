@@ -80,7 +80,7 @@ while  read -r line; do
             uart1_passed="1" 
         fi
     fi
-    if [[ "$line" == *"false"* ]]; then
+    if [[ "$line" == *"static test false"* ]]; then
        exit 
     fi
     if [[ "$line" == *"power up test ok"* ]]; then
