@@ -61,26 +61,28 @@ if  [[ ! "$hexname" =~ $(date "+%Y%m%d") ]]; then
 fi    
 
 # 烧录all_xxxxxx.hex测试程序
-stmprogram -d STM32F407VE -i SWD -s 4000 "$hexname" > "$PROGRAMFILE"
-while [[  "$test_enter" != 1 ]] && read -r line; do
-    if [[ "$line" == *"Error:"* ]]; then
-       echo
-       echo "$line"
-       echo -e "\033[01;03;31mprogram all_xxxxxx.hex software failed\033[00m\n"
-       exit 
-    fi
-    if [[ "$line" == *"FAILED"* ]]; then
-       echo
-       echo "$line"
-       echo -e "\033[01;03;31mprogram all_xxxxxx.hex software failed\033[00m\n"
-       exit 
-    fi
-    if [[ "$line" == *"Script processing completed"* ]]; then
-       echo
-       echo -e "program iotest.hex software passed.\n"
-       break 
-    fi
-done < "$PROGRAMFILE"
+if [[ "$test_enter" != 1 ]]; then
+    stmprogram -d STM32F407VE -i SWD -s 4000 "$hexname" > "$PROGRAMFILE"
+    while  read -r line; do
+        if [[ "$line" == *"Error:"* ]]; then
+            echo
+            echo "$line"
+            echo -e "\033[01;03;31mprogram all_xxxxxx.hex software failed\033[00m\n"
+            exit 
+        fi
+        if [[ "$line" == *"FAILED"* ]]; then
+            echo
+            echo "$line"
+            echo -e "\033[01;03;31mprogram all_xxxxxx.hex software failed\033[00m\n"
+            exit 
+        fi
+        if [[ "$line" == *"Script processing completed"* ]]; then
+            echo
+            echo -e "program iotest.hex software passed.\n"
+            break 
+        fi
+    done < "$PROGRAMFILE"
+fi
 echo ""
 echo ""
 
