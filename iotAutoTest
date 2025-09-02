@@ -13,6 +13,7 @@ function uasage ()
 	echo "       -4 or --4gless: not 4g test."
 	echo "       -p or --productless: not program product software."
     echo "       -w or --workpath:input files path."
+    echo "       -S or --speak: speak some important message."
 }
 
 out_file="/home/jiayi/test_$(date "+%Y%m%d").txt"
@@ -51,6 +52,9 @@ until [ $# = 0 ]; do
             work_path=$2
             shift
 			;;
+        -S|--speak)
+            speak=1
+            ;;
 		-*)
 			echo "no this OPTION."
 			exit 1
@@ -59,6 +63,13 @@ until [ $# = 0 ]; do
 	shift
 done
 
+#speak function
+function speak_fun(){
+    if [ "$speak" = "1" ]; then
+        which espeak > /dev/null && espeak "$1"
+    fi
+}
+speak_fun "startting"
 #进入工作目录
 cd "$work_path"
 
@@ -66,6 +77,7 @@ cd "$work_path"
 stty -F /dev/ttyUSB0 115200 raw -echo
 if [[ $(echo $?) != "0" ]];then
   echo -e "\033[01;05;31mcan not open /dev/ttyUSB0\033[00m\n"
+  speak_fun "cann't' open ttyUSB0!"
   exit
 fi
 
@@ -80,12 +92,14 @@ if [ -z "$ioless" ]; then
             echo
             echo "$line"
             echo -e "\033[01;05;31mprogram iotest.hex software failed\033[00m\n"
+            speak_fun "program iotest.hex software failed!"
             exit
         fi
         if [[ "$line" == *"FAILED"* ]]; then
             echo
             echo "$line"
             echo -e "\033[01;05;31mprogram iotest.hex software failed\033[00m\n"
+            speak_fun "program iotest.hex software failed!"
             exit
         fi
         if [[ "$line" == *"Script processing completed"* ]]; then
@@ -106,6 +120,7 @@ if [ -z "$ioless" ]; then
             break
         fi
         if [[ "$line" == *"auto test failed!"* ]]; then
+            speak_fun "auto test failed!"
             exit
         fi
     done < /dev/ttyUSB0
@@ -122,12 +137,14 @@ if [ -z "$simless" ]; then
             echo
             echo "$line"
             echo -e "\033[01;05;31mprogram sim 4g test software failed\033[00m\n"
+            speak_fun "program sim 4g test software failed!"
             exit
         fi
         if [[ "$line" == *"FAILED"* ]]; then
             echo
             echo "$line"
             echo -e "\033[01;05;31mprogram sim 4g test software failed\033[00m\n"
+            speak_fun "program sim 4g test software failed!"
             exit
         fi
         if [[ "$line" == *"Script processing completed"* ]]; then
@@ -147,6 +164,7 @@ if [ -z "$simless" ]; then
         fi
         if [[ "$line" == *"ERROR"* ]]; then
             echo -e "\033[01;05;31m4G modle test failed\033[00m\n"
+            speak_fun "4G modle test failed!"
             exit
         fi
     done < /dev/ttyUSB0
@@ -237,6 +255,7 @@ if [[ "$lastline" == ":00000001FF"* ]]; then
     fi
 else
     echo "no availd product software"
+    speak_fun "no availd product software!"
     exit
 fi
 
@@ -263,12 +282,14 @@ while  read -r line; do
        echo
        echo "$line"
        echo -e "\033[01;05;31mprogram product software failed\033[00m\n"
+       speak_fun " program product software failed!"
        exit
     fi
     if [[ "$line" == *"FAILED"* ]]; then
        echo
        echo "$line"
        echo -e "\033[01;05;31mprogram product software failed\033[00m\n"
+       speak_fun " program product software failed!"
        exit
     fi
     if [[ "$line" == *"Script processing completed"* ]]; then
@@ -277,6 +298,14 @@ while  read -r line; do
        echo "mcu序列号:$stmuid" | tee -a "$out_file" | tee -a "$uid_file"
        echo "sim卡序列号:$ccid" | tee -a "$out_file" | tee -a "$uid_file"
        echo "serial_num:$serial_num" | tee -a "$out_file" | tee -a "$uid_file"
+       echo ""
+       ccid=${ccid:=10000}
+       sim="1${ccid: -1}"
+       ser=${serial_num: -1}
+       rescult=$((sim - ser))
+       rescult=${rescult: -1}
+       echo "sim - serial_num = ${rescult}"
+       speak_fun "$rescult"
        serial_num=$(( "$serial_num" + 1 ))
        echo -en "$serial_num\0" > "$serial_file"
        echo
@@ -289,3 +318,4 @@ echo -e "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" | tee -a
 if [ -e "$PROGRAMFILE" ];then
     rm "$PROGRAMFILE"
 fi
+speak_fun "all jobs accomplish!"

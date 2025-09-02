@@ -10,6 +10,7 @@ function uasage ()
 	echo "       -h or --help: show helps."
 	echo "       -r or --regen: regenerate all_xxxxxx.hex file."
 	echo "       -t or --test: no program all_xxxxxx.hex file."
+    echo "       -S or --speak: speak some important message."
 }
 
 function generate_hex ()
@@ -42,6 +43,9 @@ until [ $# = 0 ]; do
 		-t|--test)
 		   test_enter=1
 			;;
+        -S|--speak)
+            speak=1
+            ;;
 		-*)
 			echo "no this OPTION."
 			exit 1
@@ -49,7 +53,12 @@ until [ $# = 0 ]; do
 	esac
 	shift
 done
-
+#speak function
+function speak_fun(){
+    if [ "$speak" = "1" ]; then
+        which espeak > /dev/null && espeak "$1"
+    fi
+}
 #是否需要生成all_xxxxxx.hex
 hexname=$(ls all_*.hex)
 if  [[ ! "$hexname" =~ $(date "+%Y%m%d") ]]; then
@@ -68,12 +77,14 @@ if [[ "$test_enter" != 1 ]]; then
             echo
             echo "$line"
             echo -e "\033[01;03;31mprogram all_xxxxxx.hex software failed\033[00m\n"
+            speak_fun "program all.hex sotfware failed."
             exit 
         fi
         if [[ "$line" == *"FAILED"* ]]; then
             echo
             echo "$line"
             echo -e "\033[01;03;31mprogram all_xxxxxx.hex software failed\033[00m\n"
+            speak_fun "program all.hex sotfware failed."
             exit 
         fi
         if [[ "$line" == *"Script processing completed"* ]]; then
@@ -90,6 +101,7 @@ echo ""
 stty -F /dev/ttyUSB0 115200 raw -echo
 if [[ $(echo $?) != "0" ]];then
     echo -e "\033[01;05;31mcan not open /dev/ttyUSB0\033[00m\n"
+    speak_fun "can not open /dev/ttyUSB0."
     exit
 fi
 # 检查io测试是否通过
@@ -124,6 +136,7 @@ while  read -r line; do
            break
        else
             echo "test failed" | tee -a $testname
+            speak_fun "test failed."
            exit 
        fi
     fi
@@ -133,6 +146,7 @@ time iap_bin  /dev/ttyACM0 WL_IO_F407.bin
 if [[ $? != 0 ]]; then
     echo "iap_bin failed" >> $testname
     echo -e "\033[01;05;31miap_bin failed\033[0m"
+    speak_fun "iap_bin failed."
     exit
 fi
 io_info /dev/ttyUSB0 | tee -a $infoname
