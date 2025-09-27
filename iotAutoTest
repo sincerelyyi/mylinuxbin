@@ -305,7 +305,6 @@ while  read -r line; do
        rescult=$((sim - ser))
        rescult=${rescult: -1}
        echo "sim - serial_num = ${rescult}"
-       speak_fun "$rescult"
        serial_num=$(( "$serial_num" + 1 ))
        echo -en "$serial_num\0" > "$serial_file"
        echo
@@ -318,4 +317,5 @@ echo -e "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" | tee -a
 if [ -e "$PROGRAMFILE" ];then
     rm "$PROGRAMFILE"
 fi
+speak_fun "$rescult"
 speak_fun "all jobs accomplish!"
