@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+file=$1
+value=$2
+
+while read -r line;do
+    if [ -n "$(grep sim <<<$line)" ];then
+        sim=2${line: -3}
+    fi
+    if [ -n "$(grep serial_num <<<$line)" ];then
+        serial_num=1${line: -3}
+        if [[ "$sim" =~ ^[0-9]+$ ]];then
+           result=$((sim - serial_num))
+           result=${result: -3}
+        else
+           result=xxx
+        fi
+        if [ "$result" != "$value" ];then
+            echo "$lastline $line  result=$result"
+        fi
+    fi
+    lastline=$line
+done < "$1"
+

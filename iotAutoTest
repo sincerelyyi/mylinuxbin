@@ -23,7 +23,7 @@ apphex="WL_IOT_001.hex"
 iottemphex="/dev/shm/IOT.hex"
 uid_file="/dev/shm/uid"
 work_path="/home/jiayi/baidusyncdisk/张家艺工作/江裕彬/WL_IOT_001/input"
-#work_path="/media/mint/A0A8-D9F8/input"
+#work_path="/media/mint/UPAN/input"
 PROGRAMFILE=/dev/shm/programfile
 old_result_file=/dev/shm/old_result_${PPID}
 
@@ -301,11 +301,15 @@ while  read -r line; do
        echo "serial_num:$serial_num" | tee -a "$out_file" | tee -a "$uid_file"
        echo ""
        ccid=${ccid:=10000}
-       sim="1${ccid: -3}"
-       ser=${serial_num: -3}
-       result=$((sim - ser))
-       result=${result: -3}
-       echo "sim - serial_num = ${result}"
+       sim="2${ccid: -3}"
+       ser="1${serial_num: -3}"
+       if [[ "$sim" =~ ^[0-9]+$ ]];then
+           result=$((sim - ser))
+           result=${result: -3}
+       else
+           result=xxx
+       fi
+       echo "sim - serial_num = ${result}" | tee -a "$out_file" "$uid_file"
        serial_num=$(( "$serial_num" + 1 ))
        echo -en "$serial_num\0" > "$serial_file"
        echo
@@ -314,7 +318,7 @@ while  read -r line; do
     fi
 done < "$PROGRAMFILE"
 
-echo -e "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" | tee -a "$out_file" | tee -a "$uid_file"
+echo -e "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" | tee -a "$out_file" | tee -a "$uid_file"
 if [ -e "$PROGRAMFILE" ];then
     rm "$PROGRAMFILE"
 fi
@@ -328,7 +332,7 @@ if [ -n "$old_result" -a "$result" != "$old_result" ];then
     speak_fun  "attension!the result not equal the old_result!"
 else
     echo -en "\033[01;05;32mall completed.\033[00m\n"
-    speak_fun "completed"
+    speak_fun "${result: -1}"
 fi
 
  echo "$result" > "$old_result_file"
