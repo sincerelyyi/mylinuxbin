@@ -17,14 +17,15 @@ function uasage ()
 }
 
 out_file="/home/jiayi/test_$(date "+%Y%m%d").txt"
-#out_file="/media/mint/A0A8-D9F8/test_$(date "+%Y%m%d").txt"
+#out_file="/media/mint/UPAN/test_$(date "+%Y%m%d").txt"
 serial_file="IOT_001_Serial.txt"
-apphex="WL_IOT_001_v1.04(20250515).hex"
+apphex="WL_IOT_001.hex"
 iottemphex="/dev/shm/IOT.hex"
 uid_file="/dev/shm/uid"
 work_path="/home/jiayi/baidusyncdisk/张家艺工作/江裕彬/WL_IOT_001/input"
 #work_path="/media/mint/A0A8-D9F8/input"
 PROGRAMFILE=/dev/shm/programfile
+old_result_file=/dev/shm/old_result_${PPID}
 
 #处理参数
 until [ $# = 0 ]; do
@@ -66,7 +67,7 @@ done
 #speak function
 function speak_fun(){
     if [ "$speak" = "1" ]; then
-        which espeak > /dev/null && espeak "$1"
+        which espeak > /dev/null && espeak "$1" &
     fi
 }
 speak_fun "startting"
@@ -300,15 +301,15 @@ while  read -r line; do
        echo "serial_num:$serial_num" | tee -a "$out_file" | tee -a "$uid_file"
        echo ""
        ccid=${ccid:=10000}
-       sim="1${ccid: -1}"
-       ser=${serial_num: -1}
-       rescult=$((sim - ser))
-       rescult=${rescult: -1}
-       echo "sim - serial_num = ${rescult}"
+       sim="1${ccid: -3}"
+       ser=${serial_num: -3}
+       result=$((sim - ser))
+       result=${result: -3}
+       echo "sim - serial_num = ${result}"
        serial_num=$(( "$serial_num" + 1 ))
        echo -en "$serial_num\0" > "$serial_file"
        echo
-       echo -en "\033[01;05;32mprogram product software passed\033[00m\n"
+       echo  "program product software passed."
        break
     fi
 done < "$PROGRAMFILE"
@@ -317,5 +318,17 @@ echo -e "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" | tee -a
 if [ -e "$PROGRAMFILE" ];then
     rm "$PROGRAMFILE"
 fi
-speak_fun "$rescult"
-speak_fun "all jobs accomplish!"
+
+if [ -e "$old_result_file" ];then
+    old_result=$(cat "$old_result_file")
+fi
+
+if [ -n "$old_result" -a "$result" != "$old_result" ];then
+    echo -en "\033[01;05;31mattension!the result no equit the old_result!\033[00m\n"
+    speak_fun  "attension!the result not equal the old_result!"
+else
+    echo -en "\033[01;05;32mall completed.\033[00m\n"
+    speak_fun "completed"
+fi
+
+ echo "$result" > "$old_result_file"
