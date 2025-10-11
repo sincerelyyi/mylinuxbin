@@ -18,7 +18,7 @@ function uasage ()
 
 out_file="/home/jiayi/test_$(date "+%Y%m%d").txt"
 #out_file="/media/mint/UPAN/test_$(date "+%Y%m%d").txt"
-serial_file="IOT_001_Serial.txt"
+serial_file="/dev/shm/IOT_001_Serial.txt"
 apphex="WL_IOT_001.hex"
 iottemphex="/dev/shm/IOT.hex"
 uid_file="/dev/shm/uid"
