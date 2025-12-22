@@ -149,7 +149,18 @@ if [[ $? != 0 ]]; then
     speak_fun "iap_bin failed."
     exit
 fi
-io_info /dev/ttyUSB0 | tee -a $infoname
+io_info /dev/ttyUSB0 | tee $PROGRAMFILE
+while read -r line;do
+    if [[ "$line" == *"verify code sign failure"* ]];then
+        echo -e "\033[01;05;31mverify code sign failure\033[0m"
+        speak_fun "verify code sign failure"
+    fi
+    if [[ "$line" == *"verify uid sign failure"* ]];then
+        echo -e "\033[01;05;31mverify code sign failure\033[0m"
+        speak_fun "verify uid sign failure"
+    fi
+done < "$PROGRAMFILE"
+cat "$PROGRAMFILE" >> "$infoname"
 if [ -e "$PROGRAMFILE" ];then
     rm "$PROGRAMFILE"
 fi
