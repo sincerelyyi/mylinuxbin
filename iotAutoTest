@@ -111,7 +111,8 @@ if [ -z "$ioless" ]; then
     done < "$PROGRAMFILE"
 
     # 检查io测试是否通过
-    while  read -r line; do
+    while  read -t 5 -r line; do
+        no_timeout=true
         echo "$line" | tr -d "\r" | tee -a "$out_file"
         if [[ "$line" == *"STM32F103 UID:"* ]]; then
             stmuid=$(echo -n "${line##*\ }" | tr -d "\r")
@@ -125,6 +126,13 @@ if [ -z "$ioless" ]; then
             exit
         fi
     done < /dev/ttyUSB0
+    if [ -z "$no_timeout" ];then
+       echo "ttyUSB0 can not receive message\n" >>$out_file
+       echo -e "\033[01;05;31mttyUSB0 can not receive message\033[00m\n"
+       speak_fun "can not receive message."
+       exit
+    fi
+
 fi
 
 if [ -z "$simless" ]; then
