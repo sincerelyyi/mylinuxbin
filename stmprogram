@@ -18,6 +18,7 @@ uasage ()
 	echo "       -s or --speed: program speed 100-100000,4000 for 4000K bit.default: 4000"
 	echo "       -r or --reset: reset config file.the args you input saved to config file"
 	echo "                      for auto comolete next time"
+    echo "       -R or --RESET: only reset mcu"
 	echo "       -v or --view: view config file."
 }
 
@@ -102,6 +103,9 @@ until [ $# = 0 ]; do
 		-r|--reset)
 			setfdefault
 			;;
+        -R|--RESET)
+            reset_mcu=true
+            ;;
 		-*)
 			echo "no this OPTION."
 			exit 2
@@ -237,7 +241,9 @@ fi
 #写commandfile
 echo 'h' > $COMMANDFILE
 echo 'r' >> $COMMANDFILE
-echo "${act}" >> $COMMANDFILE
+if [ -z "$reset_mcu" ];then
+    echo "${act}" >> $COMMANDFILE
+fi
 echo 'r'  >> $COMMANDFILE
 echo 'g'  >> $COMMANDFILE
 echo 'qc' >> $COMMANDFILE
