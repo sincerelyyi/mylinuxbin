@@ -164,29 +164,43 @@ if [ -z "$simless" ]; then
     done < "$PROGRAMFILE"
 
     # 检查4G测试是否通过
-    while  read -r line; do
-        # 检查是否包含"auto test passed"
-        echo "$line" | iconv -f GBK -t utf-8 | tr -d "\r" | tee -a "$out_file"
-        if [[ "$line" == *"+CCID: "* ]]; then
-            ccid=$(echo -n "${line##*\ }" | tr -d "\r")
-            break
-        fi
-        if [[ "$line" == *"ERROR"* ]]; then
-            echo -e "\033[01;05;31m4G modle test failed\033[00m\n"
-            speak_fun "4G modle test failed!"
+    try_times=0
+    while [ "$try_times" -ge 0 ];do
+        try_times=$((try_times+1))
+        if [ "$try_times" -gt 3 ];then
+            echo -e "\033[01;05;31mpolarizate failed\033[00m\n"
+            speak_fun "polarizate failed"
             exit
         fi
-    done < /dev/ttyUSB0
+        while  read -r line; do
+            # 检查是否包含"+CCID"
+            echo "$line" | iconv -f GBK -t utf-8 | tr -d "\r" | tee -a "$out_file"
+            if [[ "$line" == *"+CCID: "* ]]; then
+                ccid=$(echo -n "${line##*\ }" | tr -d "\r")
+                break
+            fi
+            if [[ "$line" == *"ERROR"* ]]; then
+                echo -e "\033[01;05;31m4G modle test failed\033[00m\n"
+                speak_fun "4G modle test failed!"
+                exit
+            fi
+        done < /dev/ttyUSB0
 
-    echo -en TEST > /dev/ttyUSB0
+        echo -en TEST > /dev/ttyUSB0
 
-    while  read -r line; do
-        newline=$(echo "$line" | iconv -f GBK -t utf-8)
-        echo "$newline" | tr -d "\r"| tee -a "$out_file"
-        if [[ "$newline" == *"wifi扫描+基站定位"* ]]; then
-            break
-        fi
-    done < /dev/ttyUSB0
+        while  read -r line; do
+            newline=$(echo "$line" | iconv -f GBK -t utf-8)
+            echo "$newline" | tr -d "\r"| tee -a "$out_file"
+            if [[ "$newline" == *"wifi扫描+基站定位"* ]]; then
+                try_times=-1
+                break
+            fi
+            if [[ "$newline" == "基站定位"* ]]; then
+                stmprogram -R > /dev/null
+                break
+            fi
+        done < /dev/ttyUSB0
+    done
 
     while  read -r line; do
         newline=$(echo "$line" | iconv -f GBK -t utf-8)
