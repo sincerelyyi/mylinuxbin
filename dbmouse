@@ -2,10 +2,12 @@
 
 #####################################################################
 #               windows linux 双系统公用一个蓝牙鼠标                #
-# 1, 首先再Linux连接好蓝牙鼠标										#
+# 1, 首先再Linux连接好蓝牙鼠标                                      #
 # 2，在windows下连接好蓝牙鼠标（此时linux下蓝牙已经不能与鼠标相连了)#
-# 3，使用PsExec64.exe 从windows的注册表导出蓝牙的配置				#
-# 4, 将windows下蓝牙鼠标的配置改到linux下							#
+# 3，在windows以管理员权限运行WSL windows下的linux子系统            #
+# 4, 在WSL运行本脚本，将会在C：根目录产生dbmouse_key.reg文件        #
+# 5, 在linux下运行本脚本 dbmouse dbmouse_key.reg                    #
+# 6, 在linux重连蓝牙就可以了                                        #
 #####################################################################
 # get bt address
 get_addr(){
@@ -258,7 +260,7 @@ linux_handle() {
 	write_file
 }
 #judge in linux or windows
-if [[ $(uname -a) =~ .*Microsoft.* ]];then
+if [[ $(uname -a) =~ .*[Mm]icrosoft.* ]];then
 	sys=windows
 	windows_handle
 else
