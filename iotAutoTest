@@ -121,7 +121,7 @@ if [ -z "$ioless" ]; then
         if [[ "$line" == *"auto test passed"* ]]; then
             break
         fi
-        if [[ "$line" == *"auto test failed!"* ]]; then
+        if [[ "$line" == *"failed"* ]]; then
             speak_fun "auto test failed!"
             exit
         fi
