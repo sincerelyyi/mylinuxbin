@@ -113,7 +113,7 @@ if [ -z "$ioless" ]; then
     # 检查io测试是否通过
     while  read -t 5 -r line; do
         no_timeout=true
-        echo "$line" | tr -d "\r" | tee -a "$out_file"
+        echo "$line" | tr -cd '[:print:]\n\033' | tee -a "$out_file"
         if [[ "$line" == *"STM32F103 UID:"* ]]; then
             stmuid=$(echo -n "${line##*\ }" | tr -d "\r")
         fi
