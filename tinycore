@@ -1,0 +1,24 @@
+#!/usr/bin/bash
+#file name: tinycore
+#open virtalmachine tinycore  and ssh on it
+domstate="$(virsh domstate tinycore)"
+case "$domstate" in
+"shut off")
+    echo tinycore is starting...
+    virsh start tinycore
+    ;;
+"running")
+    echo "tinycore have being running"
+    ;;
+*)
+    echo "domstate=${domstate}"
+    echo "have some errors"
+    exit
+    ;;
+esac
+
+while ! nc -zw1 tinycore 22 >/dev/null 2>&1;do
+    echo -n '.'
+done
+echo -e "\n\n"
+sshpass -p zjy85295675 ssh  tc@tinycore

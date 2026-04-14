@@ -1,0 +1,14 @@
+#!/usr/bin/bash
+#file name: vm_mac
+#open virtalmachine  vm_mac and ssh on it
+
+if ! nc -zw1 vm_mac 22 >/dev/null 2>&1;then
+    echo vm_mac is starting...
+    nohup >/dev/null 2>&1 /home/jiayi/gitsource/OneClick-macOS-Simple-KVM/basic.sh &
+fi
+
+while ! nc -zw1 vm_mac 22 >/dev/null 2>&1;do
+    echo -n '.'
+done
+echo -e "\n\n"
+sshpass -p zjy85295675 ssh  black@vm_mac
