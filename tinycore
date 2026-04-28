@@ -17,8 +17,15 @@ case "$domstate" in
     ;;
 esac
 
+timeout=0
 while ! nc -zw1 tinycore 22 >/dev/null 2>&1;do
     echo -n '.'
+    let timeout++
+    if [ "$timeout" -gt 60 ];then
+        echo ""
+        echo "connecting timeout."
+        exit
+    fi
 done
 echo -e "\n\n"
 sshpass -p zjy85295675 ssh  tc@tinycore
