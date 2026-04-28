@@ -1,13 +1,13 @@
 #!/usr/bin/bash
-#file name: vm_mac
-#open virtalmachine  vm_mac and ssh on it
+#file name: deskmac
+#open virtalmachine  deskmac and ssh on it
 
 
-if ! nc -zw1 vm_mac 22 >/dev/null 2>&1;then
-    echo vm_mac is starting...
+if ! nc -zw1 deskmac 22 >/dev/null 2>&1;then
+    echo deskmac is starting...
     if [ "$#" -eq 0 ];then
         echo "now is no graphic mode"
-        echo "'vm_mac xx' graphic mode"
+        echo "'deskmac xx' graphic mode"
         HEADLESS=1 /home/jiayi/gitsource/OneClick-macOS-Simple-KVM/basic.sh >/dev/null &
     else  
         /home/jiayi/gitsource/OneClick-macOS-Simple-KVM/basic.sh &
@@ -15,14 +15,14 @@ if ! nc -zw1 vm_mac 22 >/dev/null 2>&1;then
 fi
 
 timeout=0
-while ! nc -zw1 vm_mac 22 >/dev/null 2>&1;do
+while ! nc -zw1 deskmac 22 >/dev/null 2>&1;do
     echo -n '.'
     let timeout++
     if [ "$timeout" -gt 60 ];then
         echo ""
-        echo "connecting timeout."
+        echo  "connecting timeout."
         exit
     fi
 done
 echo -e "\n\n"
-sshpass -p zjy85295675 ssh  black@vm_mac
+sshpass -p zjy85295675 ssh  jiayi@deskmac
