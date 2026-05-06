@@ -1,0 +1,31 @@
+#!/usr/bin/bash
+#file name: alpine
+#open virtalmachine alpine  and ssh on it
+domstate="$(virsh domstate alpine)"
+case "$domstate" in
+"shut off")
+    echo alpine is starting...
+    virsh start alpine
+    ;;
+"running")
+    echo "alpine have being running"
+    ;;
+*)
+    echo "domstate=${domstate}"
+    echo "have some errors"
+    exit
+    ;;
+esac
+
+timeout=0
+while ! nc -zw1 alpine 22 >/dev/null 2>&1;do
+    echo -n '.'
+    let timeout++
+    if [ "$timeout" -gt 60 ];then
+        echo ""
+        echo "connecting timeout."
+        exit
+    fi
+done
+echo -e "\n\n"
+sshpass -p zjy85295675 ssh jiayi@alpine
