@@ -84,10 +84,16 @@ uid=$(echo $uid | tr ' ' '-')
 md5=$(md5sum /dev/shm/md5|cut -d ' ' -f 1)
 echo mcu_uid:${uid}
 echo flash_md5:${md5}
-echo mcu_num:$(cut -d ' ' -f1 ~/bldcTest_*.txt | sort|uniq|wc -l)
 echo "$uid $md5 $(date +"%F %H:%M:%S")" >> $output
+echo mcu_num:$(cut -d ' ' -f1 ~/bldcTest_*.txt | sort|uniq|wc -l)
 
 echo -e "\033[01;05;32mall passed!\033[00m\n"
 if [ -e "$COMMANDFILE" ];then
     rm "$COMMANDFILE"
+fi
+if [ -e "/dev/shm/uid" ];then
+    rm "/dev/shm/uid"
+fi
+if [ -e "/dev/shm/md5" ];then
+    rm "/dev/shm/md5"
 fi
