@@ -18,6 +18,11 @@ testbin="build/test.bin"
 app="data/bldc.hex"
 uid_base="0x1FFF7590"
 
+#speak function
+function speak_fun(){
+    which espeak > /dev/null && espeak "$1"
+}
+
 cd "$path"
 
 #通过test.bin获取MSP,PC的值
@@ -84,10 +89,18 @@ uid=$(echo $uid | tr ' ' '-')
 md5=$(md5sum /dev/shm/md5|cut -d ' ' -f 1)
 echo mcu_uid:${uid}
 echo flash_md5:${md5}
-echo "$uid $md5 $(date +"%F %H:%M:%S")" >> $output
-echo mcu_num:$(cut -d ' ' -f1 ~/bldcTest_*.txt | sort|uniq|wc -l)
+if [[ -n "$uid" ]];then
+    echo "$uid $md5 $(date +"%F %H:%M:%S")" >> $output
+    mcu_num=$(cut -d ' ' -f1 ~/bldcTest_*.txt | sort|uniq|wc -l)
+    if [[ "$((mcu_num%4))" -eq "0" ]];then
+        speak_fun "$mcu_num"
+    fi
+    echo mcu_num:${mcu_num}
 
-echo -e "\033[01;05;32mall passed!\033[00m\n"
+    echo -e "\033[01;05;32mall passed!\033[00m\n"
+else
+    echo -e "\033[01;03;31merror!\033[00m\n"
+fi
 if [ -e "$COMMANDFILE" ];then
     rm "$COMMANDFILE"
 fi
