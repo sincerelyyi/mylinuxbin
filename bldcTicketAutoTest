@@ -1,0 +1,113 @@
+#!/bin/bash
+
+
+function uasage ()
+{
+	echo "                   bldcAutoTest"
+	echo "this script auto test bldc."
+	echo "Usage: bldcAutoTest [OPTION]."
+	echo "OPTION:"
+	echo "       -h or --help: show helps."
+}
+
+# 全局变量
+path="/home/jiayi/mysoftware/stm32/bldc_ticket_test/"
+output="/home/jiayi/bldcTicketTest_$(date "+%Y%m%d").txt"
+testhex="build/test.elf"
+testbin="build/test.bin"
+app="data/bldc.hex"
+uid_base="0x1FFF7590"
+
+#speak function
+function speak_fun(){
+    which espeak > /dev/null && espeak "$1"
+}
+
+cd "$path"
+
+echo $binlength
+#通过test.bin获取MSP,PC的值
+MSP=$(od -tx4 -N4 -An ${testbin} | tr -d [[:space:]])
+PC=$(od -tx4 -N4 -j4 -An ${testbin} | tr 'a-f' 'A-F')
+PC=$(echo "obase=16;ibase=16; ${PC} - 1" | bc)
+PC=$(echo "$PC" | tr 'A-F' 'a-f' |tr -d [[:space:]])
+echo "MSP=0x$MSP"
+echo "PC =0x$PC"
+
+COMMANDFILE=/dev/shm/command.jflash
+echo 'h'                                     > $COMMANDFILE
+echo "r"                                    >> $COMMANDFILE
+echo "loadfile $app"                        >> $COMMANDFILE
+echo "loadfile $testhex"                    >> $COMMANDFILE
+echo "savebin /dev/shm/uid ${uid_base} 12"  >> $COMMANDFILE
+echo "savebin /dev/shm/md5 0x08000000 0x8000" >> $COMMANDFILE
+echo "wReg MSP,0x${MSP}"                    >> $COMMANDFILE
+echo "setPC 0x${PC}"                        >> $COMMANDFILE
+#echo 'g'                                   >> $COMMANDFILE
+echo 'qc'                                   >> $COMMANDFILE
+
+#处理参数
+until [ $# = 0 ]; do
+	case $1 in
+		-h|--help)
+			uasage 
+			exit 0
+			;;
+		-*)
+			echo "no this OPTION."
+			exit 1
+			;;
+	esac
+	shift
+done
+
+
+# 烧录testhex测试程序
+while  read -r line; do
+    if [[ "$line" == *"Error:"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram iotest.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"FAILED"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram iotest.hex software failed\033[00m\n"
+       exit 
+    fi
+    if [[ "$line" == *"not exist"* ]]; then
+       echo
+       echo "$line"
+       echo -e "\033[01;03;31mprogram iotest.hex software failed\033[00m\n"
+       exit 
+    fi
+done < <(JLinkExe -autoconnect 1 -device stm32g030f6 -if swd -speed 4000 -commandfile "$COMMANDFILE")
+
+#处理flash的md5sum和uid
+uid=$(od -tx4 -An -N12 /dev/shm/uid)
+uid=$(echo $uid | tr ' ' '-')
+md5=$(md5sum /dev/shm/md5|cut -d ' ' -f 1)
+echo mcu_uid:${uid}
+echo flash_md5:${md5}
+if [[ -n "$uid" ]];then
+    echo "$uid $md5 $(date +"%F %H:%M:%S")" >> $output
+    mcu_num=$(cut -d ' ' -f1 ~/bldcTicketTest_*.txt | sort|uniq|wc -l)
+    if [[ "$((mcu_num%4))" -eq "0" ]];then
+        speak_fun "$mcu_num"
+    fi
+    echo mcu_num:${mcu_num}
+
+    echo -e "\033[01;05;32mall passed!\033[00m\n"
+else
+    echo -e "\033[01;03;31merror!\033[00m\n"
+fi
+if [ -e "$COMMANDFILE" ];then
+    rm "$COMMANDFILE"
+fi
+if [ -e "/dev/shm/uid" ];then
+    rm "/dev/shm/uid"
+fi
+if [ -e "/dev/shm/md5" ];then
+    rm "/dev/shm/md5"
+fi
