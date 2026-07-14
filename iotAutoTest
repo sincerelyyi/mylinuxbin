@@ -344,7 +344,7 @@ while  read -r line; do
        echo "serial_num:$serial_num" | tee -a "$out_file" | tee -a "$uid_file"
        echo ""
        ccid=${ccid:=10000}
-       sim="2${ccid: -3}"
+       sim="3${ccid: -3}"
        ser="1${serial_num: -3}"
        if [[ "$sim" =~ ^[0-9]+$ ]];then
            result=$((sim - ser))
