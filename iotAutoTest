@@ -11,6 +11,7 @@ function uasage ()
 	echo "       -n or --number: input serial_num."
 	echo "       -i or --ioless: not io test."
 	echo "       -4 or --4gless: not 4g test."
+	echo "       -5 or --noblue5: 4g test end at blue 4."
 	echo "       -p or --productless: not program product software."
     echo "       -w or --workpath:input files path."
     echo "       -S or --speak: speak some important message."
@@ -46,6 +47,9 @@ until [ $# = 0 ]; do
 		-4|--4gless)
             simless=1
 			;;
+        -5|--noblue5)
+            noblue5=1
+            ;;
 		-p|--productless)
             productless=1
 			;;
@@ -184,7 +188,22 @@ if [ -z "$simless" ]; then
                 speak_fun "4G modle test failed!"
                 exit
             fi
+            if [[ "$line" == *"+QMTOPEN: 0,-1"* ]];then
+                if [[ "$noblue5" == 1 ]];then
+                    no_servicer=1
+                    break
+                else
+                    echo -e "\033[01;05;31mcan not connect to servicer\033[00m\n"
+                    speak_fun "can not connect to servicer"
+                    exit
+                fi
+            fi
+
         done < /dev/ttyUSB0
+
+        if [[ "$no_servicer" == 1 ]];then
+            break
+        fi
 
         echo -en TEST > /dev/ttyUSB0
 
@@ -202,55 +221,56 @@ if [ -z "$simless" ]; then
         done < /dev/ttyUSB0
     done
 
-    while  read -r line; do
-        newline=$(echo "$line" | iconv -f GBK -t utf-8)
-        echo "$newline" | tr -d "\r"| tee -a "$out_file"
-        if [[ "$newline" == *"CARD：10101010"* ]]; then
-            break
+    if [ -z "$no_servicer" ];then
+        while  read -r line; do
+            newline=$(echo "$line" | iconv -f GBK -t utf-8)
+            echo "$newline" | tr -d "\r"| tee -a "$out_file"
+            if [[ "$newline" == *"CARD：10101010"* ]]; then
+                break
+            fi
+        done < /dev/ttyUSB0
+        if [ -z "$switchless" ]; then
+            while  read -r line; do
+                newline=$(echo "$line" | iconv -f GBK -t utf-8)
+                echo "$newline"
+                if [[ "$newline" == *"拨位开关：0111"* ]]; then
+                    break
+                fi
+            done < /dev/ttyUSB0
+
+            while  read -r line; do
+                newline=$(echo "$line" | iconv -f GBK -t utf-8)
+                echo "$newline"
+                if [[ "$newline" == *"拨位开关：0011"* ]]; then
+                    break
+                fi
+            done < /dev/ttyUSB0
+
+            while  read -r line; do
+                newline=$(echo "$line" | iconv -f GBK -t utf-8)
+                echo "$newline"
+                if [[ "$newline" == *"拨位开关：0001"* ]]; then
+                    break
+                fi
+            done < /dev/ttyUSB0
+
+            while  read -r line; do
+                newline=$(echo "$line" | iconv -f GBK -t utf-8)
+                echo "$newline"
+                if [[ "$newline" == *"拨位开关：0000"* ]]; then
+                    break
+                fi
+            done < /dev/ttyUSB0
         fi
-    done < /dev/ttyUSB0
-
-    if [ -z "$switchless" ]; then
-        while  read -r line; do
-            newline=$(echo "$line" | iconv -f GBK -t utf-8)
-            echo "$newline"
-            if [[ "$newline" == *"拨位开关：0111"* ]]; then
-                break
-            fi
-        done < /dev/ttyUSB0
 
         while  read -r line; do
             newline=$(echo "$line" | iconv -f GBK -t utf-8)
             echo "$newline"
-            if [[ "$newline" == *"拨位开关：0011"* ]]; then
-                break
-            fi
-        done < /dev/ttyUSB0
-
-        while  read -r line; do
-            newline=$(echo "$line" | iconv -f GBK -t utf-8)
-            echo "$newline"
-            if [[ "$newline" == *"拨位开关：0001"* ]]; then
-                break
-            fi
-        done < /dev/ttyUSB0
-
-        while  read -r line; do
-            newline=$(echo "$line" | iconv -f GBK -t utf-8)
-            echo "$newline"
-            if [[ "$newline" == *"拨位开关：0000"* ]]; then
+            if [[ "$newline" == *"拨位开关：1111"* ]]; then
                 break
             fi
         done < /dev/ttyUSB0
     fi
-
-    while  read -r line; do
-        newline=$(echo "$line" | iconv -f GBK -t utf-8)
-        echo "$newline"
-        if [[ "$newline" == *"拨位开关：1111"* ]]; then
-            break
-        fi
-    done < /dev/ttyUSB0
 fi
 
 if [ -n "$productless" ]; then
@@ -263,6 +283,7 @@ fi
 if [ -n "$number" ]; then
     serial_num=""
 fi
+read -t1
 while [[ "$serial_num" != 1[2-3]?[0-1]?[0-3]???? ]]; do
     read -p "no availd serial_num,please enter 1250101000:" serial_num
     serial_num=$(echo $serial_num | grep -oE "12[[:digit:]]{8}")
