@@ -15,6 +15,7 @@ function uasage ()
 
 function generate_hex ()
 {
+    ls all_*.hex  2> /dev/null && rm all_*.hex
     touch myware/boardtest.c
     sed -E -i  's/[ \t]*#define[ \t]+BOARD_TEST[ \t]+0/#define BOARD_TEST 1/g' Core/Inc/main.h
     make
