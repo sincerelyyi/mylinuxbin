@@ -22,6 +22,9 @@ function generate_hex ()
     cat ../bootloader_IO002/build/Bootloader_UDisk_USB.hex  \
         build/WL_IO_F407.hex \
         ../f407_iap/build/WL_IO_F407.hex > "all_$(date "+%Y%m%d").hex"
+    cat ../bootloader_IO002/outdir/Bootloader_TK.hex  \
+        build/WL_IO_F407.hex \
+        ../f407_iap/outdir/TK_IAP.hex > "all_$(date "+%Y%m%d").hex"
 }
 
 # 全局变量
