@@ -1,0 +1,198 @@
+#!/bin/bash
+
+
+function uasage ()
+{
+	echo "                   io03AutoTest"
+	echo "this script auto test wl_io_003 io board."
+	echo "Usage: io03AutoTest [OPTION]."
+	echo "OPTION:"
+	echo "       -h or --help: show helps."
+	echo "       -r or --regen: regenerate all_xxxxxx.hex file."
+	echo "       -t or --test: no program all_xxxxxx.hex file."
+    echo "       -S or --speak: speak some important message."
+}
+
+#speak function
+function speak_fun(){
+    if [ "$speak" = "1" ]; then
+        which espeak > /dev/null && espeak "$1"
+    fi
+}
+
+#generate_hex fuction
+function generate_hex ()
+{
+    ls all_*.hex  2> /dev/null && rm all_*.hex
+    touch myware/boardtest.c
+    if git switch iotest;then
+        if make;then
+            cat ../bootloader_IO002/outdir/Bootloader_IO03.hex  \
+                build/WL_IO_F407.hex \
+                ../f407_iap/outdir/IO03_IAP.hex > "all_$(date "+%Y%m%d").hex"
+        else
+            echo -e "\033[01;03;31mmake for test bin failed\033[00m\n"
+            speak_fun "make for test bin failed."
+            exit 1
+        fi
+
+    else
+        echo -e "\033[01;03;31mgit switch iotest failed\033[00m\n"
+        speak_fun "git switch iotest failed."
+        exit 1
+    fi
+}
+
+# 全局变量
+testname="/home/jiayi/io03test_$(date "+%Y%m%d").txt"
+infoname="/home/jiayi/io03_info_$(date "+%Y%m%d").txt"
+PROGRAMFILE=/dev/shm/programfile
+
+cd ~/mysoftware/stm32/io03
+#处理参数
+until [ $# = 0 ]; do
+	case $1 in
+		-h|--help)
+			uasage 
+			exit 0
+			;;
+		-r|--regenerate)
+		   generate_hex 
+           exit 0
+			;;
+		-t|--test)
+		   test_enter=1
+			;;
+        -S|--speak)
+            speak=1
+            ;;
+		-*)
+			echo "no this OPTION."
+			exit 1
+			;;
+	esac
+	shift
+done
+#是否需要生成all_xxxxxx.hex
+hexname=$(ls all_*.hex)
+if  [[ ! "$hexname" =~ $(date "+%Y%m%d") ]]; then
+    if [ -a "$hexname" ]; then
+        rm "$hexname"
+    fi
+    generate_hex
+    hexname=$(ls all_*.hex)
+fi    
+
+# 烧录all_xxxxxx.hex测试程序
+if [[ "$test_enter" != 1 ]]; then
+    stmprogram -d STM32F407VE -i SWD -s 4000 "$hexname" > "$PROGRAMFILE"
+    while  read -r line; do
+        if [[ "$line" == *"Error:"* ]]; then
+            echo
+            echo "$line"
+            echo -e "\033[01;03;31mprogram all_xxxxxx.hex software failed\033[00m\n"
+            speak_fun "program all.hex sotfware failed."
+            exit 1
+        fi
+        if [[ "$line" == *"FAILED"* ]]; then
+            echo
+            echo "$line"
+            echo -e "\033[01;03;31mprogram all_xxxxxx.hex software failed\033[00m\n"
+            speak_fun "program all.hex sotfware failed."
+            exit 1
+        fi
+        if [[ "$line" == *"Script processing completed"* ]]; then
+            echo
+            echo -e "program iotest.hex software passed.\n"
+            break 
+        fi
+    done < "$PROGRAMFILE"
+fi
+echo ""
+echo ""
+
+#等带usb串口ACM0生成
+#echo "waitting for usb connect.."
+#for time in {1..9};do
+#    if [ $time -gt 8 ];then
+#        echo -e "\033[01;05;31musb connect failed\033[00m\n"
+#        speak_fun "usb connect failed."
+#        exit 1
+#    fi
+#    if ls /dev/ttyACM0 1>/dev/null 2>&1;then
+#        echo "usb connected"
+#        break
+#    else
+#        sleep 1
+#    fi
+#done
+
+# 设置串口
+stty -F /dev/ttyUSB0 115200 raw -echo
+if [[ $(echo $?) != "0" ]];then
+    echo -e "\033[01;05;31mcan not open /dev/ttyUSB0\033[00m\n"
+    speak_fun "can not open /dev/ttyUSB0."
+    exit 1
+fi
+# 检查io测试是否通过
+while  read -r line; do
+    echo $line | tee -a $testname
+    if [[ "$line" == *"no lkt"* ]]; then
+       exit 1
+    fi
+    if [[ "$line" == *"burn failed"* ]]; then
+       exit 1
+    fi
+    if [[ "$line" == *"LKT had be burned successfully"* ]]; then
+        lkt_passed="1"
+    fi
+    if [[ "$line" == *"fm test passed"* ]]; then
+        fm_passed="1"
+        echo -en 111111 >/dev/ttyUSB0
+    fi
+    if [[ "$line" == *"uart1 test passed"* ]]; then
+        uart1_passed="1"
+    fi
+    if [[ "$line" == *"uart5 test passed"* ]]; then
+        uart5_passed="1"
+    fi
+    if [[ "$line" == *"adc test passed"* ]]; then
+        adc_passed="1"
+    fi
+    if [[ "$line" == *"i0/rgb/pwm test passed"* ]]; then
+        i0_passed="1"
+    fi
+    if [[ "$line" == *">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"* ]]; then
+       if [[ $lkt_passed && $fm_passed && $uart1_passed && $uart5_passed && \
+            $adc_passed && $io_passed ]]; then
+           break
+       else
+            echo "test failed" | tee -a $testname
+            speak_fun "test failed."
+           exit 1
+       fi
+    fi
+done < /dev/ttyUSB0
+sleep 1
+time iap_bin  /dev/ttyACM0 WL_IO_F407.bin
+if [[ $? != 0 ]]; then
+    echo "iap_bin failed" >> $testname
+    echo -e "\033[01;05;31miap_bin failed\033[0m"
+    speak_fun "iap_bin failed."
+    exit 1
+fi
+io_info /dev/ttyUSB0 | tee $PROGRAMFILE
+while read -r line;do
+    if [[ "$line" == *"verify code sign failure"* ]];then
+        echo -e "\033[01;05;31mverify code sign failure\033[0m"
+        speak_fun "verify code sign failure"
+    fi
+    if [[ "$line" == *"verify uid sign failure"* ]];then
+        echo -e "\033[01;05;31mverify code sign failure\033[0m"
+        speak_fun "verify uid sign failure"
+    fi
+done < "$PROGRAMFILE"
+cat "$PROGRAMFILE" >> "$infoname"
+if [ -e "$PROGRAMFILE" ];then
+    rm "$PROGRAMFILE"
+fi
