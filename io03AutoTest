@@ -159,22 +159,22 @@ while  read -r line; do
     if [[ "$line" == *"adc test passed"* ]]; then
         adc_passed="1"
     fi
-    if [[ "$line" == *"i0/rgb/pwm test passed"* ]]; then
-        i0_passed="1"
+    if [[ "$line" == *"io/rgb/pwm test passed"* ]]; then
+        io_passed="1"
     fi
     if [[ "$line" == *">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"* ]]; then
        if [[ $lkt_passed && $fm_passed && $uart1_passed && $uart5_passed && \
             $adc_passed && $io_passed ]]; then
            break
        else
-            echo "test failed" | tee -a $testname
-            speak_fun "test failed."
+           echo "test failed" | tee -a $testname
+           speak_fun "test failed."
            exit 1
        fi
     fi
 done < /dev/ttyUSB0
 sleep 1
-time iap_bin  /dev/ttyACM0 WL_IO_F407.bin
+time iap_bin -s /dev/ttyACM0 WL_IO_F407.bin
 if [[ $? != 0 ]]; then
     echo "iap_bin failed" >> $testname
     echo -e "\033[01;05;31miap_bin failed\033[0m"
@@ -196,3 +196,6 @@ cat "$PROGRAMFILE" >> "$infoname"
 if [ -e "$PROGRAMFILE" ];then
     rm "$PROGRAMFILE"
 fi
+echo -n "tested number: "
+grep "uid:" ~/io03_info_* | sort | uniq | wc -l
+echo
