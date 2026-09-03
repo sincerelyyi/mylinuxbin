@@ -85,6 +85,7 @@ fi
 
 # 烧录all_xxxxxx.hex测试程序
 if [[ "$test_enter" != 1 ]]; then
+    sleep 1
     stmprogram -d STM32F407VE -i SWD -s 4000 "$hexname" > "$PROGRAMFILE"
     while  read -r line; do
         if [[ "$line" == *"Error:"* ]]; then
@@ -103,14 +104,13 @@ if [[ "$test_enter" != 1 ]]; then
         fi
         if [[ "$line" == *"Script processing completed"* ]]; then
             echo
-            echo -e "program iotest.hex software passed.\n"
+            echo -e "program iotest.hex software passed."
             break 
         fi
     done < "$PROGRAMFILE"
 fi
 echo ""
 echo ""
-
 #等带usb串口ACM0生成
 #echo "waitting for usb connect.."
 #for time in {1..9};do
@@ -137,6 +137,9 @@ fi
 # 检查io测试是否通过
 while  read -r line; do
     echo $line | tee -a $testname
+    if [[ "$line" == *"protect had been setted"* ]]; then
+        speak_fun "repoweron board"
+    fi
     if [[ "$line" == *"no lkt"* ]]; then
        exit 1
     fi
@@ -173,23 +176,41 @@ while  read -r line; do
        fi
     fi
 done < /dev/ttyUSB0
-sleep 1
-time iap_bin -s /dev/ttyACM0 WL_IO_F407.bin
-if [[ $? != 0 ]]; then
-    echo "iap_bin failed" >> $testname
-    echo -e "\033[01;05;31miap_bin failed\033[0m"
-    speak_fun "iap_bin failed."
-    exit 1
-fi
+
+sleep 3
+for i in {1..9};do
+    echo try times: $i
+    if [ -a /dev/ttyACM0 ];then
+        echo "ttyACM0 be found"
+        iap_bin -s /dev/ttyACM0 WL_IO_F407.bin 2> /dev/null
+        if [ $? = 0 ]; then
+            break
+        fi
+    else
+        sleep 1
+    fi
+    if [ "$i" = 9 ];then
+        iap_bin -s /dev/ttyACM0 WL_IO_F407.bin
+        if [[ $? != 0 ]]; then
+            echo "iap_bin failed" >> $testname
+            echo -e "\033[01;05;31miap_bin failed\033[0m"
+            speak_fun "iap_bin failed."
+            exit 1
+        fi
+        break
+    fi
+done
+
 io_info /dev/ttyUSB0 | tee $PROGRAMFILE
 while read -r line;do
     if [[ "$line" == *"verify code sign failure"* ]];then
         echo -e "\033[01;05;31mverify code sign failure\033[0m"
         speak_fun "verify code sign failure"
-    fi
-    if [[ "$line" == *"verify uid sign failure"* ]];then
-        echo -e "\033[01;05;31mverify code sign failure\033[0m"
+        info_err=1
+    elif [[ "$line" == *"verify uid sign failure"* ]];then
+        echo -e "\033[01;05;31mverify uid sign failure\033[0m"
         speak_fun "verify uid sign failure"
+        info_err=1
     fi
 done < "$PROGRAMFILE"
 cat "$PROGRAMFILE" >> "$infoname"
@@ -197,5 +218,12 @@ if [ -e "$PROGRAMFILE" ];then
     rm "$PROGRAMFILE"
 fi
 echo -n "tested number: "
-grep "uid:" ~/io03_info_* | sort | uniq | wc -l
+num=$(grep "uid:" ~/io03_info_* | sort | uniq | wc -l)
+echo $num
 echo
+
+if [ "$info_err" = 1 ];then
+    exit 1
+fi
+echo -e "\033[01;32mok,all passed!\033[00m\n"
+speak_fun "$num"
